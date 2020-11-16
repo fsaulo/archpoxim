@@ -1,0 +1,16 @@
+[START OF SIMULATION]
+0x00000000:	bun 7                    	PC=0x00000020
+0x00000020:	mov r1,2                 	R1=0x00000002
+0x00000024:	mov r2,3                 	R2=0x00000003
+0x00000028:	divi r2,r1,0             	R2=R1/0x00000000=0x00000003,SR=0x00000020
+0x0000002C:	mov sp,32764             	SP=0x00007FFC
+0x00000030:	push -                   	MEM[0x00007FFC]{}={}
+0x00000034:	push -                   	MEM[0x00007FFC]{}={}
+0x00000038:	push r1                  	MEM[0x00007FFC]{0x00000002}={R1}
+0x0000003C:	push r2,r3               	MEM[0x00007FF8]{0x00000003,0x00000000}={R2,R3}
+0x00000040:	push sr                  	MEM[0x00007FF0]{0x00000020}={SR}
+0x00000044:	pop -                    	{}=MEM[0x00007FEC]{}
+0x00000048:	pop sr                   	{SR}=MEM[0x00007FEC]{0x00000020}
+0x0000004C:	pop r3,r2,r1             	{R3,R2,R1}=MEM[0x00007FF0]{0x00000000,0x00000003,0x00000002}
+[INVALID INSTRUCTION @ 0x00000050]
+[END OF SIMULATION]

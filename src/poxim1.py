@@ -128,13 +128,6 @@ def debug_mode(value=False):
     global debug
     debug = value
 
-
-def parse_arg(content):
-    global struct
-    signal = int(content, 0x10)   # Convert buffer content to uint16
-    op = hex(signal >> 26 & 0x7F) # Get the instruction first 6 bits  
-    return struct[op]             # Return callable operation
-
 def __subarg(args):
     subfunc = {
     '0x3' : sla
@@ -222,7 +215,15 @@ def main(args):
     except IndexError as ex1:
         print('[Errno ?] Output file not provided')
 
-struct = {
+def parse_arg(content):
+    global struct
+    signal = int(content, 0x10)   # Convert buffer content to uint16
+    op = hex(signal >> 26 & 0x7F) # Get the instruction first 6 bits  
+    return struct[op]             # Return callable operation
+
+
+if __name__ == '__main__':
+    struct = {
     '0x0' : mov,
     '0x1' : movs,
     '0x2' : add,
@@ -231,9 +232,8 @@ struct = {
     '0x12': addi,
     '0x37': bun,
     '0x3f': inte
-}
+    }
 
-if __name__ == '__main__':
     debug = True
     bus   = None
     main(sys.argv)

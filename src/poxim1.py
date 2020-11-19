@@ -22,7 +22,6 @@ def add(args):
     z = args >> 21 & 0x1F
     x = args >> 16 & 0x1F
     y = args >> 11 & 0x1F
-    __clrsr()
     R[z] = R[x] + R[y] if z != 0 else 0x0
     Rx31 = R[x] >> 31 & 0x1
     Ry31 = R[y] >> 31 & 0x1
@@ -44,7 +43,6 @@ def sub(args):
     z = args >> 21 & 0x1F
     x = args >> 16 & 0x1F
     y = args >> 11 & 0x1F
-    __clrsr()
     R[z] = R[x] - R[y] if z != 0 else 0x0
     Rx31 = R[x] >> 31 & 0x1
     Ry31 = R[y] >> 31 & 0x1
@@ -61,6 +59,21 @@ def sub(args):
     __incaddr()
     return cmd
 
+def mul(args):
+    msg = 'op: "mul" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def sll(args):
+    msg = 'op: "sll" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def muls(args):
+    msg = 'op: "muls" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
 def sla(args):
     global R
     z = args >> 21 & 0x1F
@@ -70,7 +83,6 @@ def sla(args):
     B    = (R[z] << 0x08 | R[y]) << (l+1)
     R[z] = B >> 32 & 0xFFFFFFFF if z != 0 else 0x0
     R[x] = B >> 0  & 0xFFFFFFFF if x != 0 else 0x0
-    __clrsr()
     R[31] |= 0x40 if B    == 0 else 0x0
     R[31] |= 0x08 if R[z] != 0 else 0x0
     ins = 'sla r{},r{},r{},{}'.format(z, x, x, l).ljust(25)
@@ -81,10 +93,189 @@ def sla(args):
     __incaddr()
     return(cmd)
 
+def div(args):
+    msg = 'op: "div" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def srl(args):
+    msg = 'op: "srl" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def divs(args):
+    msg = 'op: "divs" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def sra(args):
+    msg = 'op: "sra" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def cmpx(args):
+    msg = 'op: "cmpx" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def andx(args):
+    msg = 'op: "andx" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def orx(args):
+    msg = 'op: "orx" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def notx(args):
+    msg = 'op: "notx" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def xor(args):
+    msg = 'op: "xor" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
 def addi(args):
-    if debug: 
-        print('addi')
-    return 'addi'
+    msg = 'op: "addi" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def subi(args):
+    msg = 'op: "subi" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def muli(args):
+    msg = 'op: "muli" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def divi(args):
+    msg = 'op: "divi" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def modi(args):
+    msg = 'op: "modi" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def cmpi(args):
+    msg = 'op: "cmpi" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def l8(args):
+    msg = 'op: "l8" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def l16(args):
+    msg = 'op: "l16" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def l32(args):
+    msg = 'op: "l32" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def s8(args):
+    msg = 'op: "s8" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def s16(args):
+    msg = 'op: "s16" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def s32(args):
+    msg = 'op: "s32" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def bae(args):
+    msg = 'op: "bae" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def bat(args):
+    msg = 'op: "bat" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def bbe(args):
+    msg = 'op: "bbe" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def bbt(args):
+    msg = 'op: "bbt" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def beq(args):
+    msg = 'op: "beq" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def bge(args):
+    msg = 'op: "bge" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def bgt(args):
+    msg = 'op: "bgt" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def biv(args):
+    msg = 'op: "biv" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def ble(args):
+    msg = 'op: "ble" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def blt(args):
+    msg = 'op: "blt" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def bne(args):
+    msg = 'op: "bne" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def bni(args):
+    msg = 'op: "bni" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def bnz(args):
+    msg = 'op: "bnz" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
+
+def bun(args):
+    global R
+    addr  = phex(R[29])
+    ins   = 'bun {}'.format(args).ljust(25)
+    R[29] = R[29] + 4 + (args << 2)
+    cmd   = '{}:\t{}\tPC={}'.format(addr, ins, phex(R[29]))
+    __stdout(cmd)
+    return cmd
+
+def bzd(args):
+    msg = 'op: "bzd" NOT IMPLEMENTED'
+    __stdout(msg)
+    return msg
 
 def movs(args):
     global R
@@ -98,22 +289,9 @@ def movs(args):
     __incaddr()
     return cmd
 
-def phex(string, length=10):
-    return '{0:#0{1}X}'.format(string, length).replace('X','x')
-
-def bun(args):
+def intx(args):
     global R
     addr  = phex(R[29])
-    ins   = 'bun {}'.format(args).ljust(25)
-    R[29] = R[29] + 4 + (args << 2)
-    cmd   = '{}:\t{}\tPC={}'.format(addr, ins, phex(R[29]))
-    __stdout(cmd)
-    return cmd
-
-def inte(args):
-    global R
-    addr  = phex(R[29])
-
     if (args >> 0 & 0x3FFFFFF) == 0:
         R[29] = 0
         ins   = 'int 0'.ljust(25)
@@ -124,17 +302,28 @@ def inte(args):
         __write(cmd)
         __interrupt()
 
+def phex(string, length=10):
+    return '{0:#0{1}X}'.format(string, length).replace('X','x')
+
 def debug_mode(value=False):
     global debug
     debug = value
 
 def __subarg(args):
     subfunc = {
-    '0x3' : sla
+        '0x0' : mul,
+        '0x1' : sll,
+        '0x2' : muls,
+        '0x3' : sla,
+        '0x4' : div,
+        '0x5' : srl,
+        '0x6' : divs,
+        '0x7' : sra
     }
     index = args >> 8 & 0x03
     cmd = subfunc[hex(index)](args)
-    if cmd is not None: return cmd
+    if cmd is not None: 
+        return cmd
 
 def __stdout(output):
     if debug:
@@ -168,10 +357,6 @@ def __interrupt():
 def __init(line):
     global bus
     bus = line
-
-def __clrsr():
-    global R
-    R[31] = 0
 
 def __write(line):
     global bus
@@ -217,21 +402,51 @@ def main(args):
 
 def parse_arg(content):
     global struct
-    signal = int(content, 0x10)   # Convert buffer content to uint16
-    op = hex(signal >> 26 & 0x7F) # Get the instruction first 6 bits  
+    signal = int(content, 0x10)   # Convert buffer content to uint64
+    op = hex(signal >> 26 & 0x7F) # Get the first 6-bits of the instruction 
     return struct[op]             # Return callable operation
 
 
 if __name__ == '__main__':
     struct = {
-    '0x0' : mov,
-    '0x1' : movs,
-    '0x2' : add,
-    '0x3' : sub,
-    '0x4' : __subarg,
-    '0x12': addi,
-    '0x37': bun,
-    '0x3f': inte
+        '0x0' : mov,
+        '0x1' : movs,
+        '0x2' : add,
+        '0x3' : sub,
+        '0x4' : __subarg,
+        '0x5' : cmpx,
+        '0x6' : andx,
+        '0x7' : orx,
+        '0x8' : notx,
+        '0x9' : xor,
+        '0x12': addi,
+        '0x13': subi,
+        '0x14': muli,
+        '0x15': divi,
+        '0x16': modi,
+        '0x17': cmpi,
+        '0x18': l8,
+        '0x19': l16,
+        '0x1a': l32,
+        '0x1b': s8,
+        '0x1c': s16,
+        '0x1d': s32,
+        '0x2a': bae,
+        '0x2b': bat,
+        '0x2c': bbe,
+        '0x2d': bbt,
+        '0x2e': beq,
+        '0x2f': bge,
+        '0x30': bgt,
+        '0x31': biv,
+        '0x32': ble,
+        '0x33': blt,
+        '0x34': bne,
+        '0x35': bni,
+        '0x36': bnz,
+        '0x37': bun,
+        '0x38': bzd,
+        '0x3f': intx
     }
 
     debug = True

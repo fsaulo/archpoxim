@@ -26,9 +26,9 @@ def add(args):
     Rx31 = R[x] >> 31 & 0x1
     Ry31 = R[y] >> 31 & 0x1
     Rz31 = R[z] >> 31 & 0x1
-    R[31] |= 0x40 if R[z]  == 0 else 0x0
-    R[31] |= 0x10 if Rx31  == 1 else 0x0 
-    R[31] |= 0x04 if (Rx31 == Ry31) and (Rx31 != Rz31) else 0x0
+    R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x40)
+    R[31] = R[31] | 0x10 if Rx31  == 1 else R[31] & ~(1<<0x10) 
+    R[31] = R[31] | 0x04 if (Rx31 == Ry31) and (Rx31 != Rz31) else R[31] & ~(1<<0x4)
     R[31] |= R[z] >> 32 & 0x1
     R[z] = R[z] & 0xFFFFFFFF if z != 0 else 0x0
     ins  = 'add r{},r{},r{}'.format(z, x, y).ljust(25)
@@ -47,11 +47,11 @@ def sub(args):
     Rx31 = R[x] >> 31 & 0x1
     Ry31 = R[y] >> 31 & 0x1
     Rz31 = R[z] >> 31 & 0x1
-    R[31] |= 0x40 if R[z]  == 0 else 0x0
-    R[31] |= 0x10 if Rx31  == 1 else 0x0 
-    R[31] |= 0x04 if (Rx31 != Ry31) and (Rx31 != Rz31) else 0x0
-    R[31] |= R[z] >> 32 & 0x1
-    R[z]  &= 0xFFFFFFFF if z != 0 else 0x0
+    R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x40)
+    R[31] = R[31] | 0x10 if Rz31  == 1 else R[31] & ~(1<<0x10)
+    R[31] = R[31] | 0x8  if (Rx31 != Ry31) and (Rx31 != Rz31) else R[31] & ~(1<<0x8)
+    R[31] = R[31] | 0x1  if R[z] >> 32 & 0x1 else R[31] & ~(1<<0x0)
+    R[z] &= 0xFFFFFFFF if z != 0 else 0x0
     ins  = 'sub r{},r{},r{}'.format(z, x, y).ljust(25)
     res  = 'R{}=R{}-R{}={}'.format(z, x, y, phex(R[z]))
     cmd  = '{}:\t{}\t{},SR={}'.format(phex(R[29]), ins, res, phex(R[31]))
@@ -78,12 +78,12 @@ def sla(args):
     x = args >> 16 & 0x1F
     y = args >> 11 & 0x1F
     l = args >> 0  & 0x1F
-    A = (R[z] << 0x08 | R[x])
-    B = A << (l+1)
+    B = (R[z] << 0x08 | R[x]) << (l+1)
     R[z] = B >> 32 & 0xFFFFFFFF if z != 0 else 0x0
     R[x] = B >> 0  & 0xFFFFFFFF if x != 0 else 0x0
-    R[31] |= 0x40 if A    == 0 else 0x0
-    R[31] |= 0x08 if R[z] != 0 else 0x0
+    A = (R[z] << 0x08 | R[x])
+    R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x40)
+    R[31] = R[31] | 0x08 if R[z] != 0 else R[31] & ~(1<<0x08)
     ins = 'sla r{},r{},r{},{}'.format(l, z, x, l).ljust(25)
     res = 'R{}:R{}=R{}:R{}<<{}={}'.format(z, x, z, y, l+1, phex(A, 18))
     cmd = '{}:\t{}\t{},SR={}'.format(phex(R[29]),ins, res, phex(R[31]))

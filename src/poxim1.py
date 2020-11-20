@@ -283,8 +283,20 @@ def muli(args):
     return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31])) 
 
 def divi(args):
-    msg = 'op: "divi" NOT IMPLEMENTED'
-    return msg
+    global R
+    (x, _, z) = __get_index(args)
+    l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
+    try:
+        R[z] = R[x] // __twos_comp(l) if z != 0 else 0x0
+    except ZeroDivisionError as ex:
+        R[z] = 0x0
+    R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x06)
+    R[31] = R[31] | 0x20 if args >> 0 & 0xFFFF == 0 else R[31] & ~(1<<0x05)
+    R[31] = 0
+    ins = 'divi {},{},{}'.format(__r(z), __r(x), __twos_comp(l)).ljust(25)
+    res = 'R{}=R{}/{}={}'.format(z, x, phex(l), phex(R[z]))
+    __incaddr()
+    return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31])) 
 
 def modi(args):
     msg = 'op: "modi" NOT IMPLEMENTED'

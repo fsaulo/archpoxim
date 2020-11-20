@@ -421,6 +421,9 @@ def __r(reg):
         res = 'r{}'.format(reg)
     return res
 
+def __loadreg(inst):
+    R[28] = inst
+
 def __incaddr():
     R[29] += 4
 
@@ -488,6 +491,7 @@ def main(args):
                     arg = int(instruc, 0x10) & word # Extract 25-bit buffer
                     cmd = call(arg)                 # Call function with args
                     __write(cmd)                    # Write result to the bus
+                    __loadreg(arg)                  # Load current instruction to IR
                 except KeyError as ex2:
                     __badinstr()
             __interrupt()

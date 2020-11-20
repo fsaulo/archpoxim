@@ -310,10 +310,13 @@ def __subarg(args):
         '0x6' : divs,
         '0x7' : sra
     }
-    index = args >> 8 & 0x03
-    cmd = subfunc[hex(index)](args)
-    if cmd is not None: 
-        return cmd
+    index = args >> 8 & 0b111
+    try:
+        cmd = subfunc[hex(index)](args)
+        if cmd is not None: 
+            return cmd
+    except KeyError as ex1:
+        __badinstr()
 
 def __stdout(output):
     if debug:
@@ -343,6 +346,12 @@ def __interrupt():
         sys.exit()
     except Exception as ex:
         print('[Errno ?] Exit with status error')
+
+def __badinstr():
+    msg = '[INVALID INSTRUCTION @ {}]\n'.format(phex(R[29]))
+    __write(msg)
+    __stdout(msg.rstrip('\n'))
+    __interrupt()
 
 def __init(line):
     global bus
@@ -383,9 +392,8 @@ def main(args):
                     arg = int(instruc, 0x10) & word # Extract 25-bit buffer
                     cmd = call(arg)                 # Call function with args
                     __write(cmd)                    # Write result to the bus
-                except Exception as ex2:
-                    print(ex2)
-                    print('INVALID INSTRUCTION')
+                except KeyError as ex2:
+                    __badinstr()
             __interrupt()
     except IndexError as ex1:
         print('[Errno ?] Output file not provided')
@@ -393,9 +401,11 @@ def main(args):
 def parse_arg(content):
     global struct
     signal = int(content, 0x10)   # Convert buffer content to uint64
-    op = hex(signal >> 26 & 0x7F) # Get the first 6-bits of the instruction 
-    return struct[op]             # Return callable operation
-
+    op = hex(signal >> 26 & 0x7F) # Get the first 6-bits of the instruction
+    try: 
+        return struct[op]         # Return callable operation
+    except KeyError as ex1:
+        __badinstr()              # Instruction not listed as valid operation
 
 if __name__ == '__main__':
     struct = {

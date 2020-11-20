@@ -196,8 +196,22 @@ def sra(args):
     return(cmd)
 
 def cmpx(args):
-    msg = 'op: "cmpx" NOT IMPLEMENTED'
-    return msg
+    global R
+    (x, y, z) = __get_index(args)
+    l = args >> 0  & 0x1F
+    CMP = R[x] - R[y]
+    CMP31 = CMP  >> 31 & 0x1
+    Rx31  = R[x] >> 31 & 0x1
+    Ry31  = R[y] >> 31 & 0x1
+    R[31] = R[31] | 0x40 if CMP   == 0 else R[31] & ~(1<<0x06)
+    R[31] = R[31] | 0x20 if CMP31 != 1 else R[31] & ~(1<<0x04)
+    R[31] = R[31] | 0x08 if Rx31 != Ry31 and CMP31 != Rx31 else R[31] & ~(1<<0x03)
+    R[31] = R[31] | 0x01 if CMP >> 32 & 0x1 == 1 else R[31] & ~(1<<0x00)
+    ins = 'cmp {},{}'.format(__r(x), __r(y)).ljust(25)
+    cmd = '{}:\t{}\tSR={}'.format(phex(R[29]), ins, phex(R[31]))
+    __stdout(cmd)
+    __incaddr()
+    return(cmd)
 
 def andx(args):
     msg = 'op: "andx" NOT IMPLEMENTED'

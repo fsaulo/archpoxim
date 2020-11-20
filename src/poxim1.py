@@ -26,9 +26,9 @@ def add(args):
     Rx31 = R[x] >> 31 & 0x1
     Ry31 = R[y] >> 31 & 0x1
     Rz31 = R[z] >> 31 & 0x1
-    R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x40)
-    R[31] = R[31] | 0x10 if Rx31  == 1 else R[31] & ~(1<<0x10) 
-    R[31] = R[31] | 0x04 if (Rx31 == Ry31) and (Rx31 != Rz31) else R[31] & ~(1<<0x4)
+    R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x06)
+    R[31] = R[31] | 0x10 if Rx31  == 1 else R[31] & ~(1<<0x04)
+    R[31] = R[31] | 0x04 if (Rx31 == Ry31) and (Rx31 != Rz31) else R[31] & ~(1<<0x03)
     R[31] |= R[z] >> 32 & 0x1
     R[z] = R[z] & 0xFFFFFFFF if z != 0 else 0x0
     ins  = 'add r{},r{},r{}'.format(z, x, y).ljust(25)
@@ -47,9 +47,9 @@ def sub(args):
     Rx31 = R[x] >> 31 & 0x1
     Ry31 = R[y] >> 31 & 0x1
     Rz31 = R[z] >> 31 & 0x1
-    R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x40)
-    R[31] = R[31] | 0x10 if Rz31  == 1 else R[31] & ~(1<<0x10)
-    R[31] = R[31] | 0x8  if (Rx31 != Ry31) and (Rx31 != Rz31) else R[31] & ~(1<<0x8)
+    R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x06)
+    R[31] = R[31] | 0x10 if Rz31  == 1 else R[31] & ~(1<<0x04)
+    R[31] = R[31] | 0x8  if (Rx31 != Ry31) and (Rx31 != Rz31) else R[31] & ~(1<<0x03)
     R[31] = R[31] | 0x1  if R[z] >> 32 & 0x1 else R[31] & ~(1<<0x0)
     R[z] &= 0xFFFFFFFF if z != 0 else 0x0
     ins  = 'sub r{},r{},r{}'.format(z, x, y).ljust(25)
@@ -68,8 +68,8 @@ def mul(args):
     R[l] = B >> 32 & 0xFFFFFFFF if l != 0 else 0x0
     R[z] = B >> 0  & 0xFFFFFFFF if z != 0 else 0x0
     A = (R[l] << 0x08 | R[z])
-    R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x40)
-    R[31] = R[31] | 0x01 if R[l] != 0 else R[31] & ~(1<<0x01)
+    R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
+    R[31] = R[31] | 0x01 if R[l] != 0 else R[31] & ~(1<<0x00)
     ins = 'mul r{},r{},r{},r{}'.format(l, z, x, y).ljust(25)
     res = 'R{}:R{}=R{}*R{}={}'.format(l, z, x, y, phex(A, 18))
     cmd = '{}:\t{}\t{},SR={}'.format(phex(R[29]), ins, res, phex(R[31]))
@@ -109,8 +109,8 @@ def sla(args):
     R[z] = B >> 32 & 0xFFFFFFFF if z != 0 else 0x0
     R[x] = B >> 0  & 0xFFFFFFFF if x != 0 else 0x0
     A = (R[z] << 0x08 | R[x])
-    R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x40)
-    R[31] = R[31] | 0x08 if R[z] != 0 else R[31] & ~(1<<0x08)
+    R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
+    R[31] = R[31] | 0x08 if R[z] != 0 else R[31] & ~(1<<0x03)
     ins = 'sla r{},r{},r{},{}'.format(z, x, x, l).ljust(25)
     res = 'R{}:R{}=R{}:R{}<<{}={}'.format(z, x, z, y, l+1, phex(A, 18))
     cmd = '{}:\t{}\t{},SR={}'.format(phex(R[29]),ins, res, phex(R[31]))

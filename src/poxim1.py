@@ -432,6 +432,12 @@ def __incaddr():
     global R
     R[29] += 4
 
+def __twos_comp(value, size=32):
+    if (value & (1 << (size - 1))) != 0:
+        return value - (1 << size)
+    else:
+        return value
+
 def __r(reg):
     registers = {
         28 : 'ir',

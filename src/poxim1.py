@@ -19,9 +19,7 @@ def mov(args):
 
 def add(args):
     global R
-    z = args >> 21 & 0x1F
-    x = args >> 16 & 0x1F
-    y = args >> 11 & 0x1F
+    (x, y, z) = __get_index(args)
     R[z] = R[x] + R[y] if z != 0 else 0x0
     Rx31 = R[x] >> 31 & 0x1
     Ry31 = R[y] >> 31 & 0x1
@@ -40,9 +38,7 @@ def add(args):
 
 def sub(args):
     global R
-    z = args >> 21 & 0x1F
-    x = args >> 16 & 0x1F
-    y = args >> 11 & 0x1F
+    (x, y, z) = __get_index(args)
     R[z] = R[x] - R[y] if z != 0 else 0x0
     Rx31 = R[x] >> 31 & 0x1
     Ry31 = R[y] >> 31 & 0x1
@@ -60,9 +56,7 @@ def sub(args):
     return cmd
 
 def mul(args):
-    z = args >> 21 & 0x1F
-    x = args >> 16 & 0x1F
-    y = args >> 11 & 0x1F
+    (x, y, z) = __get_index(args)
     l = args >> 0  & 0x1F
     B = R[x] * R[y]
     R[l] = B >> 32 & 0xFFFFFFFF if l != 0 else 0x0
@@ -79,9 +73,7 @@ def mul(args):
 
 def sll(args):
     global R
-    z = args >> 21 & 0x1F
-    x = args >> 16 & 0x1F
-    y = args >> 11 & 0x1F
+    (x, y, z) = __get_index(args)
     l = args >> 0  & 0x1F
     B = (R[z] << 0x08 | R[x]) << (l+1)
     R[z] = B >> 32 & 0xFFFFFFFF if z != 0 else 0x0
@@ -97,9 +89,7 @@ def sll(args):
     return(cmd)
 
 def muls(args):
-    z = args >> 21 & 0x1F
-    x = args >> 16 & 0x1F
-    y = args >> 11 & 0x1F
+    (x, y, z) = __get_index(args)
     l = args >> 0  & 0x1F
     B = R[x] * R[y]
     R[l] = B >> 32 & 0xFFFFFFFF if l != 0 else 0x0
@@ -116,9 +106,7 @@ def muls(args):
 
 def sla(args):
     global R
-    z = args >> 21 & 0x1F
-    x = args >> 16 & 0x1F
-    y = args >> 11 & 0x1F
+    (x, y, z) = __get_index(args)
     l = args >> 0  & 0x1F
     B = (R[z] << 0x08 | R[x]) << (l+1)
     R[z] = B >> 32 & 0xFFFFFFFF if z != 0 else 0x0
@@ -134,9 +122,7 @@ def sla(args):
     return(cmd)
 
 def div(args):
-    z = args >> 21 & 0x1F
-    x = args >> 16 & 0x1F
-    y = args >> 11 & 0x1F
+    (x, y, z) = __get_index(args)
     l = args >> 0  & 0x1F
 
     try:
@@ -158,9 +144,7 @@ def div(args):
 
 def srl(args):
     global R
-    z = args >> 21 & 0x1F
-    x = args >> 16 & 0x1F
-    y = args >> 11 & 0x1F
+    (x, y, z) = __get_index(args)
     l = args >> 0  & 0x1F
     B = (R[z] << 0x08 | R[x]) >> (l+1)
     R[z] = B >> 32 & 0xFFFFFFFF if z != 0 else 0x0
@@ -176,18 +160,14 @@ def srl(args):
     return(cmd)
 
 def divs(args):
-    z = args >> 21 & 0x1F
-    x = args >> 16 & 0x1F
-    y = args >> 11 & 0x1F
+    (x, y, z) = __get_index(args)
     l = args >> 0  & 0x1F
-
     try:
         R[l] = R[x] %  R[y] if l != 0 else 0
         R[z] = R[x] // R[y] if z != 0 else 0
     except ZeroDivisionError:
         R[l] = 0
         R[z] = 0
-
     R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x20 if R[y] == 0 else R[31] & ~(1<<0x05)
     R[31] = R[31] | 0x08 if R[l] != 0 else R[31] & ~(1<<0x03)
@@ -200,9 +180,7 @@ def divs(args):
 
 def sra(args):
     global R
-    z = args >> 21 & 0x1F
-    x = args >> 16 & 0x1F
-    y = args >> 11 & 0x1F
+    (x, y, z) = __get_index(args)
     l = args >> 0  & 0x1F
     B = (R[z] << 0x08 | R[x]) >> (l+1)
     R[z] = B >> 32 & 0xFFFFFFFF if z != 0 else 0x0
@@ -420,6 +398,12 @@ def __r(reg):
     except KeyError as ex:
         res = 'r{}'.format(reg)
     return res
+
+def __get_index(args):
+    z = args >> 21 & 0x1F
+    x = args >> 16 & 0x1F
+    y = args >> 11 & 0x1F
+    return (x, y, z)
 
 def __loadreg(inst):
     R[28] = inst

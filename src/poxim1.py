@@ -183,7 +183,7 @@ def cmpx(args):
     Rx31  = R[x] >> 31 & 0x1
     Ry31  = R[y] >> 31 & 0x1
     R[31] = R[31] | 0x40 if CMP   == 0 else R[31] & ~(1<<0x06)
-    R[31] = R[31] | 0x20 if CMP31 != 1 else R[31] & ~(1<<0x04)
+    R[31] = R[31] | 0x10 if CMP31 != 1 else R[31] & ~(1<<0x04)
     R[31] = R[31] | 0x08 if Rx31 != Ry31 and CMP31 != Rx31 else R[31] & ~(1<<0x03)
     R[31] = R[31] | 0x01 if CMP >> 32 & 0x1 == 1 else R[31] & ~(1<<0x00)
     ins = 'cmp {},{}'.format(__r(x), __r(y)).ljust(25)

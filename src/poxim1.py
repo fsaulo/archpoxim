@@ -9,7 +9,7 @@ def mov(args):
     if args != 0:
         z    = args >> 21 & 0x1F
         R[z] = args >>  0 & 0x1FFFFF if z != 0 else 0x0
-        ins  = 'mov r{},{}'.format(z, R[z]).ljust(25) 
+        ins  = 'mov {},{}'.format(__r(z), R[z]).ljust(25) 
         cmd  = '{}:\t{}\tR{}={}'.format(phex(R[29]), ins, z, phex(R[z]))
         __stdout(cmd)
         __incaddr()
@@ -31,7 +31,7 @@ def add(args):
     R[31] = R[31] | 0x04 if (Rx31 == Ry31) and (Rx31 != Rz31) else R[31] & ~(1<<0x03)
     R[31] |= R[z] >> 32 & 0x1
     R[z] = R[z] & 0xFFFFFFFF if z != 0 else 0x0
-    ins  = 'add r{},r{},r{}'.format(z, x, y).ljust(25)
+    ins = 'add {},{},{}'.format(__r(z), __r(x), __r(y)).ljust(25)
     res  = 'R{}=R{}+R{}={}'.format(z, x, y, phex(R[z]))
     cmd  = '{}:\t{}\t{},SR={}'.format(phex(R[29]), ins, res, phex(R[31]))
     __stdout(cmd)
@@ -52,9 +52,9 @@ def sub(args):
     R[31] = R[31] | 0x8  if (Rx31 != Ry31) and (Rx31 != Rz31) else R[31] & ~(1<<0x03)
     R[31] = R[31] | 0x1  if R[z] >> 32 & 0x1 else R[31] & ~(1<<0x0)
     R[z] &= 0xFFFFFFFF if z != 0 else 0x0
-    ins  = 'sub r{},r{},r{}'.format(z, x, y).ljust(25)
-    res  = 'R{}=R{}-R{}={}'.format(z, x, y, phex(R[z]))
-    cmd  = '{}:\t{}\t{},SR={}'.format(phex(R[29]), ins, res, phex(R[31]))
+    ins = 'sub {},{},{}'.format(__r(z), __r(x), __r(y)).ljust(25)
+    res = 'R{}=R{}-R{}={}'.format(z, x, y, phex(R[z]))
+    cmd = '{}:\t{}\t{},SR={}'.format(phex(R[29]), ins, res, phex(R[31]))
     __stdout(cmd)
     __incaddr()
     return cmd
@@ -70,7 +70,7 @@ def mul(args):
     A = (R[l] << 0x08 | R[z])
     R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x01 if R[l] != 0 else R[31] & ~(1<<0x00)
-    ins = 'mul r{},r{},r{},r{}'.format(l, z, x, y).ljust(25)
+    ins = 'mul {},{},{},{}'.format(__r(l), __r(z), __r(x), __r(y)).ljust(25)
     res = 'R{}:R{}=R{}*R{}={}'.format(l, z, x, y, phex(A, 18))
     cmd = '{}:\t{}\t{},SR={}'.format(phex(R[29]), ins, res, phex(R[31]))
     __stdout(cmd)
@@ -89,7 +89,7 @@ def sll(args):
     A = (R[z] << 0x08 | R[x])
     R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x08 if R[z] != 0 else R[31] & ~(1<<0x00)
-    ins = 'sll r{},r{},r{},{}'.format(z, x, x, l).ljust(25)
+    ins = 'sll {},{},{},{}'.format(__r(z), __r(x), __r(x), l).ljust(25)
     res = 'R{}:R{}=R{}:R{}<<{}={}'.format(z, x, z, y, l+1, phex(A, 18))
     cmd = '{}:\t{}\t{},SR={}'.format(phex(R[29]),ins, res, phex(R[31]))
     __stdout(cmd)
@@ -107,7 +107,7 @@ def muls(args):
     A = (R[l] << 0x08 | R[z])
     R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x08 if R[l] != 0 else R[31] & ~(1<<0x03)
-    ins = 'muls r{},r{},r{},r{}'.format(l, z, x, y).ljust(25)
+    ins = 'muls {},{},{},{}'.format(__r(l), __r(z), __r(x), __r(y)).ljust(25)
     res = 'R{}:R{}=R{}*R{}={}'.format(l, z, x, y, phex(A, 18))
     cmd = '{}:\t{}\t{},SR={}'.format(phex(R[29]), ins, res, phex(R[31]))
     __stdout(cmd)
@@ -126,7 +126,7 @@ def sla(args):
     A = (R[z] << 0x08 | R[x])
     R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x08 if R[z] != 0 else R[31] & ~(1<<0x03)
-    ins = 'sla r{},r{},r{},{}'.format(z, x, x, l).ljust(25)
+    ins = 'sla {},{},{},{}'.format(__r(z), __r(x), __r(x), l).ljust(25)
     res = 'R{}:R{}=R{}:R{}<<{}={}'.format(z, x, z, y, l+1, phex(A, 18))
     cmd = '{}:\t{}\t{},SR={}'.format(phex(R[29]),ins, res, phex(R[31]))
     __stdout(cmd)
@@ -149,7 +149,7 @@ def div(args):
     R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x20 if R[y] == 0 else R[31] & ~(1<<0x05)
     R[31] = R[31] | 0x01 if R[l] != 0 else R[31] & ~(1<<0x00)
-    ins = 'div r{},r{},r{},r{}'.format(l, z, x, y).ljust(25)
+    ins = 'div {},{},{},{}'.format(__r(l), __r(z), __r(x), __r(y)).ljust(25)
     res = 'R{}=R{}%R{}={},R{}=R{}/R{}={}'.format(l, x, y, phex(R[l]),z, x, y,phex(R[z]))
     cmd = '{}:\t{}\t{},SR={}'.format(phex(R[29]), ins, res, phex(R[31]))
     __stdout(cmd)
@@ -168,7 +168,7 @@ def srl(args):
     A = (R[z] << 0x08 | R[x])
     R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x01 if R[z] != 0 else R[31] & ~(1<<0x00)
-    ins = 'srl r{},r{},r{},{}'.format(z, x, x, l).ljust(25)
+    ins = 'srl {},{},{},{}'.format(__r(z), __r(x), __r(x), l).ljust(25)
     res = 'R{}:R{}=R{}:R{}>>{}={}'.format(z, x, z, y, l+1, phex(A, 18))
     cmd = '{}:\t{}\t{},SR={}'.format(phex(R[29]),ins, res, phex(R[31]))
     __stdout(cmd)
@@ -191,7 +191,7 @@ def divs(args):
     R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x20 if R[y] == 0 else R[31] & ~(1<<0x05)
     R[31] = R[31] | 0x08 if R[l] != 0 else R[31] & ~(1<<0x03)
-    ins = 'divs r{},r{},r{},r{}'.format(l, z, x, y).ljust(25)
+    ins = 'divs {},{},{},{}'.format(__r(l), __r(z), __r(x), __r(y)).ljust(25)
     res = 'R{}=R{}%R{}={},R{}=R{}/R{}={}'.format(l, x, y, phex(R[l]),z, x, y,phex(R[z]))
     cmd = '{}:\t{}\t{},SR={}'.format(phex(R[29]), ins, res, phex(R[31]))
     __stdout(cmd)
@@ -210,7 +210,7 @@ def sra(args):
     A = (R[z] << 0x08 | R[x])
     R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x08 if R[z] != 0 else R[31] & ~(1<<0x03)
-    ins = 'sra r{},r{},r{},{}'.format(z, x, x, l).ljust(25)
+    ins = 'sra {},{},{},{}'.format(__r(z), __r(x), __r(x), l).ljust(25)
     res = 'R{}:R{}=R{}:R{}>>{}={}'.format(z, x, z, y, l+1, phex(A, 18))
     cmd = '{}:\t{}\t{},SR={}'.format(phex(R[29]),ins, res, phex(R[31]))
     __stdout(cmd)
@@ -356,7 +356,7 @@ def movs(args):
     sig  = (-1) if args >> 0 & 0x100000 else 1
     R[z] = (args >> 0 & 0x1FFFFF) | 0xFFE00000 if z != 0 else 0x0
     unum = (args >> 0 & 0x1FFFFF) * sig
-    ins  = 'movs r{},{}'.format(z, unum).ljust(25)
+    ins  = 'movs {},{}'.format(__r(z), unum).ljust(25)
     cmd  = '{}:\t{}\tR{}={}'.format(phex(R[29]), ins, z, phex(R[z]))
     __stdout(cmd)
     __incaddr()
@@ -407,6 +407,19 @@ def __stdout(output):
 
 def __nop(): 
     pass # Nothing to do here...
+
+def __r(reg):
+    registers = {
+        28 : 'ir',
+        29 : 'pc',
+        30 : 'sp',
+        31 : 'sr'
+    }
+    try:
+        res = registers[reg]
+    except KeyError as ex:
+        res = 'r{}'.format(reg)
+    return res
 
 def __incaddr():
     R[29] += 4

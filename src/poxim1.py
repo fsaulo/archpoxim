@@ -315,8 +315,19 @@ def modi(args):
     return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
 
 def cmpi(args):
-    msg = 'op: "cmpi" NOT IMPLEMENTED'
-    return msg
+    (x, _, _) = __get_index(args)
+    l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
+    CMPI = R[x] - __twos_comp(l)
+    CMPI31 = CMPI  >> 31 & 0x1
+    Rx31 = R[x] >> 31 & 0x1
+    l15  = l >> 15 & 0x1
+    R[31] = R[31] | 0x40 if CMPI   == 0 else R[31] & ~(1<<0x06)
+    R[31] = R[31] | 0x10 if CMPI31 == 1 else R[31] & ~(1<<0x04)
+    R[31] = R[31] | 0x08 if Rx31   != l15 and CMPI31 != Rx31 else R[31] & ~(1<<0x03)
+    R[31] = R[31] | 0x01 if CMPI >> 32 & 0x1 == 1 else R[31] & ~(1<<0x00)
+    ins = 'cmpi {},{}'.format(__r(x), __twos_comp(l)).ljust(25)
+    __incaddr()
+    return '{}:\t{}\tSR={}'.format(phex(__pc()), ins, phex(R[31]))
 
 def l8(args):
     msg = 'op: "l8" NOT IMPLEMENTED'

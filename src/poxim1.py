@@ -73,7 +73,7 @@ def sll(args):
     R[x] = B >> 0  & 0xFFFFFFFF if x != 0 else 0x0
     A = (R[z] << 0x08 | R[x])
     R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
-    R[31] = R[31] | 0x08 if R[z] != 0 else R[31] & ~(1<<0x00)
+    R[31] = R[31] | 0x01 if R[z] != 0 else R[31] & ~(1<<0x00)
     ins = 'sll {},{},{},{}'.format(__r(z), __r(x), __r(x), l).ljust(25)
     res = 'R{}:R{}=R{}:R{}<<{}={}'.format(z, x, z, y, l+1, phex(A, 18))
     __incaddr()

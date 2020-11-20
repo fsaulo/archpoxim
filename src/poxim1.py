@@ -253,8 +253,22 @@ def addi(args):
     return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
 
 def subi(args):
-    msg = 'op: "subi" NOT IMPLEMENTED'
-    return msg
+    global R
+    (x, _, z) = __get_index(args)
+    l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
+    R[z] = R[x] - __twos_comp(l) if z != 0 else 0x0
+    Rx31 = R[x] >> 31 & 0x1
+    Rz31 = R[z] >> 31 & 0x1
+    l15  = l >> 15 & 0x1
+    R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x06)
+    R[31] = R[31] | 0x10 if Rx31  == 1 else R[31] & ~(1<<0x04)
+    R[31] = R[31] | 0x08 if (Rx31 != l15) and (Rz31 != Rx31) else R[31] & ~(1<<0x03)
+    R[31] = R[31] | 0x01 if R[z] >> 32 & 0x1 == 1 else R[31] & ~(1<<0x00)
+    R[z]  = R[z] & 0xFFFFFFFF if z != 0 else 0x0
+    ins = 'subi {},{},{}'.format(__r(z), __r(z), __twos_comp(l, 32)).ljust(25)
+    res = 'R{}=R{}-{}={}'.format(z, x, phex(l), phex(R[z]))
+    __incaddr()
+    return  '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
 
 def muli(args):
     msg = 'op: "muli" NOT IMPLEMENTED'

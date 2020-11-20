@@ -26,8 +26,8 @@ def add(args):
     R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x10 if Rx31  == 1 else R[31] & ~(1<<0x04)
     R[31] = R[31] | 0x08 if (Rx31 == Ry31) and (Rx31 != Rz31) else R[31] & ~(1<<0x03)
-    R[31] |= R[z] >> 32 & 0x1
-    R[z] = R[z] & 0xFFFFFFFF if z != 0 else 0x0
+    R[31] = R[31] | 0x01 if R[z] >> 32 & 0x1 else R[31] & ~(1<<0x00)
+    R[z]  = R[z] & 0xFFFFFFFF if z != 0 else 0x0
     ins = 'add {},{},{}'.format(__r(z), __r(x), __r(y)).ljust(25)
     res  = 'R{}=R{}+R{}={}'.format(z, x, y, phex(R[z]))
     __incaddr()
@@ -42,9 +42,9 @@ def sub(args):
     Rz31 = R[z] >> 31 & 0x1
     R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x10 if Rz31  == 1 else R[31] & ~(1<<0x04)
-    R[31] = R[31] | 0x8  if (Rx31 != Ry31) and (Rx31 != Rz31) else R[31] & ~(1<<0x03)
-    R[31] = R[31] | 0x1  if R[z] >> 32 & 0x1 else R[31] & ~(1<<0x0)
-    R[z] &= 0xFFFFFFFF if z != 0 else 0x0
+    R[31] = R[31] | 0x08 if (Rx31 != Ry31) and (Rx31 != Rz31) else R[31] & ~(1<<0x03)
+    R[31] = R[31] | 0x01 if R[z] >> 32 & 0x1 else R[31] & ~(1<<0x0)
+    R[z]  = R[z] & 0xFFFFFFFF if z != 0 else 0x0
     ins = 'sub {},{},{}'.format(__r(z), __r(x), __r(y)).ljust(25)
     res = 'R{}=R{}-R{}={}'.format(z, x, y, phex(R[z]))
     __incaddr()

@@ -1,6 +1,6 @@
 import sys
 
-# Define global registers
+# Define general purpose registers
 # IR -> R[28], PC -> R[29], SP -> R[30], SR -> R[31]
 R  = [uint32 * 0 for uint32 in range(32)]
 

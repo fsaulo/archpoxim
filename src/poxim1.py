@@ -199,8 +199,23 @@ def divs(args):
     return cmd
 
 def sra(args):
-    msg = 'op: "sra" NOT IMPLEMENTED'
-    return msg
+    global R
+    z = args >> 21 & 0x1F
+    x = args >> 16 & 0x1F
+    y = args >> 11 & 0x1F
+    l = args >> 0  & 0x1F
+    B = (R[z] << 0x08 | R[x]) >> (l+1)
+    R[z] = B >> 32 & 0xFFFFFFFF if z != 0 else 0x0
+    R[x] = B >> 0  & 0xFFFFFFFF if x != 0 else 0x0
+    A = (R[z] << 0x08 | R[x])
+    R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
+    R[31] = R[31] | 0x08 if R[z] != 0 else R[31] & ~(1<<0x03)
+    ins = 'sra r{},r{},r{},{}'.format(z, x, x, l).ljust(25)
+    res = 'R{}:R{}=R{}:R{}>>{}={}'.format(z, x, z, y, l+1, phex(A, 18))
+    cmd = '{}:\t{}\t{},SR={}'.format(phex(R[29]),ins, res, phex(R[31]))
+    __stdout(cmd)
+    __incaddr()
+    return(cmd)
 
 def cmpx(args):
     msg = 'op: "cmpx" NOT IMPLEMENTED'

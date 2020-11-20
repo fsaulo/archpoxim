@@ -105,8 +105,27 @@ def sla(args):
     return(cmd)
 
 def div(args):
-    msg = 'op: "div" NOT IMPLEMENTED'
-    return msg
+    z = args >> 21 & 0x1F
+    x = args >> 16 & 0x1F
+    y = args >> 11 & 0x1F
+    l = args >> 0  & 0x1F
+
+    try:
+        R[l] = R[x] %  R[y] if l != 0 else 0
+        R[z] = R[x] // R[y] if z != 0 else 0
+    except ZeroDivisionError:
+        R[l] = 0
+        R[z] = 0
+
+    R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
+    R[31] = R[31] | 0x20 if R[y] == 0 else R[31] & ~(1<<0x05)
+    R[31] = R[31] | 0x01 if R[l] != 0 else R[31] & ~(1<<0x00)
+    ins = 'div r{},r{},r{},r{}'.format(l, z, x, y).ljust(25)
+    res = 'R{}=R{}%R{}={},R{}=R{}/R{}={}'.format(l, x, y, phex(R[l]),z, x, y,phex(R[z]))
+    cmd = '{}:\t{}\t{},SR={}'.format(phex(R[29]), ins, res, phex(R[31]))
+    __stdout(cmd)
+    __incaddr()
+    return cmd
 
 def srl(args):
     msg = 'op: "srl" NOT IMPLEMENTED'

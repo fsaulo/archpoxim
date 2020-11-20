@@ -66,12 +66,10 @@ def mul(args):
 
 def sll(args):
     msg = 'op: "sll" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def muls(args):
     msg = 'op: "muls" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def sla(args):
@@ -95,172 +93,138 @@ def sla(args):
 
 def div(args):
     msg = 'op: "div" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def srl(args):
     msg = 'op: "srl" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def divs(args):
     msg = 'op: "divs" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def sra(args):
     msg = 'op: "sra" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def cmpx(args):
     msg = 'op: "cmpx" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def andx(args):
     msg = 'op: "andx" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def orx(args):
     msg = 'op: "orx" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def notx(args):
     msg = 'op: "notx" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def xor(args):
     msg = 'op: "xor" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def addi(args):
     msg = 'op: "addi" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def subi(args):
     msg = 'op: "subi" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def muli(args):
     msg = 'op: "muli" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def divi(args):
     msg = 'op: "divi" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def modi(args):
     msg = 'op: "modi" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def cmpi(args):
     msg = 'op: "cmpi" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def l8(args):
     msg = 'op: "l8" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def l16(args):
     msg = 'op: "l16" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def l32(args):
     msg = 'op: "l32" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def s8(args):
     msg = 'op: "s8" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def s16(args):
     msg = 'op: "s16" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def s32(args):
     msg = 'op: "s32" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def bae(args):
     msg = 'op: "bae" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def bat(args):
     msg = 'op: "bat" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def bbe(args):
     msg = 'op: "bbe" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def bbt(args):
     msg = 'op: "bbt" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def beq(args):
     msg = 'op: "beq" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def bge(args):
     msg = 'op: "bge" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def bgt(args):
     msg = 'op: "bgt" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def biv(args):
     msg = 'op: "biv" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def ble(args):
     msg = 'op: "ble" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def blt(args):
     msg = 'op: "blt" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def bne(args):
     msg = 'op: "bne" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def bni(args):
     msg = 'op: "bni" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def bnz(args):
     msg = 'op: "bnz" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def bun(args):
@@ -274,7 +238,6 @@ def bun(args):
 
 def bzd(args):
     msg = 'op: "bzd" NOT IMPLEMENTED'
-    __stdout(msg)
     return msg
 
 def movs(args):

@@ -60,9 +60,22 @@ def sub(args):
     return cmd
 
 def mul(args):
-    msg = 'op: "mul" NOT IMPLEMENTED'
-    __stdout(msg)
-    return msg
+    z = args >> 21 & 0x1F
+    x = args >> 16 & 0x1F
+    y = args >> 11 & 0x1F
+    l = args >> 0  & 0x1F
+    B = R[x] * R[y]
+    R[l] = B >> 32 & 0xFFFFFFFF if l != 0 else 0x0
+    R[z] = B >> 0  & 0xFFFFFFFF if z != 0 else 0x0
+    A = (R[l] << 0x08 | R[z])
+    R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x40)
+    R[31] = R[31] | 0x01 if R[l] != 0 else R[31] & ~(1<<0x01)
+    ins = 'mul r{},r{},r{},r{}'.format(l, z, x, y).ljust(25)
+    res = 'R{}:R{}=R{}*R{}={}'.format(l, z, x, y, phex(A, 18))
+    cmd = '{}:\t{}\t{},SR={}'.format(phex(R[29]), ins, res, phex(R[31]))
+    __stdout(cmd)
+    __incaddr()
+    return cmd
 
 def sll(args):
     msg = 'op: "sll" NOT IMPLEMENTED'

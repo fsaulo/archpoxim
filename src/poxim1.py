@@ -213,8 +213,15 @@ def orx(args):
     return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
 
 def notx(args):
-    msg = 'op: "notx" NOT IMPLEMENTED'
-    return msg
+    global R
+    (x, _, z) = __get_index(args)
+    R[z] = ~R[x] & 0xFFFFFFFF if z != 0 else 0x0
+    R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
+    R[31] = R[31] | 0x10 if R[z] >> 31 & 0x1 == 1 else R[31] & ~(1<<0x04)
+    ins = 'not {},{}'.format(__r(z), __r(x)).ljust(25)
+    res = 'R{}=~R{}={}'.format(z, x, phex(R[z]))
+    __incaddr()
+    return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
 
 def xor(args):
     msg = 'op: "xor" NOT IMPLEMENTED'

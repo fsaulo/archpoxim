@@ -202,8 +202,15 @@ def andx(args):
     return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
 
 def orx(args):
-    msg = 'op: "orx" NOT IMPLEMENTED'
-    return msg
+    global R
+    (x, y, z) = __get_index(args)
+    R[z] = R[x] | R[y] if z != 0 else 0x0
+    R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
+    R[31] = R[31] | 0x10 if R[z] >> 31 & 0x1 == 1 else R[31] & ~(1<<0x04)
+    ins = 'or {},{},{}'.format(__r(z), __r(x), __r(y)).ljust(25)
+    res = 'R{}=R{}|R{}={}'.format(z, x, y, phex(R[z]))
+    __incaddr()
+    return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
 
 def notx(args):
     msg = 'op: "notx" NOT IMPLEMENTED'

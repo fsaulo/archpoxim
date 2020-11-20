@@ -80,13 +80,13 @@ def sla(args):
     x = args >> 16 & 0x1F
     y = args >> 11 & 0x1F
     l = args >> 0  & 0x1F
-    B    = (R[z] << 0x08 | R[y]) << (l+1)
+    A = (R[z] << 0x08 | R[x])
+    B = A << (l+1)
     R[z] = B >> 32 & 0xFFFFFFFF if z != 0 else 0x0
     R[x] = B >> 0  & 0xFFFFFFFF if x != 0 else 0x0
-    R[31] |= 0x40 if B    == 0 else 0x0
+    R[31] |= 0x40 if A    == 0 else 0x0
     R[31] |= 0x08 if R[z] != 0 else 0x0
-    ins = 'sla r{},r{},r{},{}'.format(z, x, x, l).ljust(25)
-    A   = (R[z] << 0x08 | R[x])
+    ins = 'sla r{},r{},r{},{}'.format(l, z, x, l).ljust(25)
     res = 'R{}:R{}=R{}:R{}<<{}={}'.format(z, x, z, y, l+1, phex(A, 18))
     cmd = '{}:\t{}\t{},SR={}'.format(phex(R[29]),ins, res, phex(R[31]))
     __stdout(cmd)

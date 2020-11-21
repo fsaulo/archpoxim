@@ -504,26 +504,26 @@ def __loadreg(inst):
     R[28] = inst
 
 def __begin():
-    msg = '[START OF SIMULATION]\n'
+    msg = '[START OF SIMULATION]'
     try:
-        bus.write(msg)
-        __stdout(msg.rstrip('\n'))
+        __write(msg)
+        __stdout(msg)
     except Exception as ex:
         print('[Errno ?] Error trying to start program')
 
 def __interrupt():
-    msg = '[END OF SIMULATION]\n'
+    msg = '[END OF SIMULATION]'
     try:
-        bus.write(msg)
-        __stdout(msg.rstrip('\n'))
+        __write(msg)
+        __stdout(msg)
         sys.exit()
     except Exception as ex:
         print('[Errno ?] Exit with status error')
 
 def __badinstr():
-    msg = '[INVALID INSTRUCTION @ {}]\n'.format(phex(R[29]))
+    msg = '[INVALID INSTRUCTION @ {}]'.format(phex(R[29]))
     __write(msg)
-    __stdout(msg.rstrip('\n'))
+    __stdout(msg)
     __interrupt()
 
 def __init(line):

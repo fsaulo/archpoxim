@@ -49,7 +49,7 @@ def sub(args):
     res = 'R{}=R{}-R{}={}'.format(z, x, y, phex(R[z]))
     __incaddr()
     return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
-    
+
 def mul(args):
     (x, y, z) = __get_index(args)
     l = args >> 0  & 0x1F
@@ -63,7 +63,7 @@ def mul(args):
     res = 'R{}:R{}=R{}*R{}={}'.format(l, z, x, y, phex(A, 18))
     __incaddr()
     return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
-    
+
 def sll(args):
     global R
     (x, y, z) = __get_index(args)
@@ -78,7 +78,7 @@ def sll(args):
     res = 'R{}:R{}=R{}:R{}<<{}={}'.format(z, x, z, y, l+1, phex(A, 18))
     __incaddr()
     return '{}:\t{}\t{},SR={}'.format(phex(__pc()),ins, res, phex(R[31]))
-    
+
 def muls(args):
     (x, y, z) = __get_index(args)
     l = args >> 0  & 0x1F
@@ -92,7 +92,7 @@ def muls(args):
     res = 'R{}:R{}=R{}*R{}={}'.format(l, z, x, y, phex(A, 18))
     __incaddr()
     return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
-    
+
 def sla(args):
     global R
     (x, y, z) = __get_index(args)
@@ -111,14 +111,11 @@ def sla(args):
 def div(args):
     (x, y, z) = __get_index(args)
     l = args >> 0  & 0x1F
-
     try:
         R[l] = R[x] %  R[y] if l != 0 else 0
         R[z] = R[x] // R[y] if z != 0 else 0
     except ZeroDivisionError:
-        R[l] = 0
-        R[z] = 0
-
+        pass
     R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x20 if R[y] == 0 else R[31] & ~(1<<0x05)
     R[31] = R[31] | 0x01 if R[l] != 0 else R[31] & ~(1<<0x00)
@@ -126,7 +123,7 @@ def div(args):
     res = 'R{}=R{}%R{}={},R{}=R{}/R{}={}'.format(l, x, y, phex(R[l]),z, x, y,phex(R[z]))
     __incaddr()
     return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
-    
+
 def srl(args):
     global R
     (x, y, z) = __get_index(args)
@@ -141,7 +138,7 @@ def srl(args):
     res = 'R{}:R{}=R{}:R{}>>{}={}'.format(z, x, z, y, l+1, phex(A, 18))
     __incaddr()
     return '{}:\t{}\t{},SR={}'.format(phex(__pc()),ins, res, phex(R[31]))
-    
+
 def divs(args):
     (x, y, z) = __get_index(args)
     l = args >> 0  & 0x1F
@@ -149,8 +146,7 @@ def divs(args):
         R[l] = R[x] %  R[y] if l != 0 else 0
         R[z] = R[x] // R[y] if z != 0 else 0
     except ZeroDivisionError:
-        R[l] = 0
-        R[z] = 0
+        pass
     R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x20 if R[y] == 0 else R[31] & ~(1<<0x05)
     R[31] = R[31] | 0x08 if R[l] != 0 else R[31] & ~(1<<0x03)
@@ -158,7 +154,7 @@ def divs(args):
     res = 'R{}=R{}%R{}={},R{}=R{}/R{}={}'.format(l, x, y, phex(R[l]),z, x, y,phex(R[z]))
     __incaddr()
     return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
-    
+
 def sra(args):
     global R
     (x, y, z) = __get_index(args)
@@ -173,7 +169,7 @@ def sra(args):
     res = 'R{}:R{}=R{}:R{}>>{}={}'.format(z, x, z, y, l+1, phex(A, 18))
     __incaddr()
     return '{}:\t{}\t{},SR={}'.format(phex(__pc()),ins, res, phex(R[31]))
-    
+
 def cmpx(args):
     global R
     (x, y, z) = __get_index(args)
@@ -280,7 +276,7 @@ def muli(args):
     ins = 'muli {},{},{}'.format(__r(z), __r(x), __twos_comp(l)).ljust(25)
     res = 'R{}=R{}*{}={}'.format(z, x, phex(l), phex(R[z]))
     __incaddr()
-    return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31])) 
+    return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
 
 def divi(args):
     global R
@@ -289,14 +285,14 @@ def divi(args):
     try:
         R[z] = R[x] // __twos_comp(l) if z != 0 else 0x0
     except ZeroDivisionError as ex:
-        R[z] = 0x0
+        pass
     R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x20 if args >> 0 & 0xFFFF == 0 else R[31] & ~(1<<0x05)
     R[31] = 0
     ins = 'divi {},{},{}'.format(__r(z), __r(x), __twos_comp(l)).ljust(25)
     res = 'R{}=R{}/{}={}'.format(z, x, phex(l), phex(R[z]))
     __incaddr()
-    return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31])) 
+    return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
 
 def modi(args):
     global R
@@ -465,7 +461,7 @@ def __stdout(output):
     if debug:
         print(output)
 
-def __nop(): 
+def __nop():
     pass # Nothing to do here...
 
 def __pc():
@@ -577,7 +573,7 @@ def parse_arg(content):
     global struct
     signal = int(content, 0x10)   # Convert buffer content to uint64
     op = hex(signal >> 26 & 0x7F) # Get the first 6-bits of the instruction
-    try: 
+    try:
         return struct[op]         # Return callable operation
     except KeyError as ex1:
         __badinstr()              # Instruction not listed as valid operation

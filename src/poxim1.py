@@ -172,8 +172,7 @@ def sra(args):
 
 def cmpx(args):
     global R
-    (x, y, z) = __get_index(args)
-    l = args >> 0  & 0x1F
+    (x, y, _) = __get_index(args)
     CMP = R[x] - R[y]
     CMP31 = CMP  >> 31 & 0x1
     Rx31  = R[x] >> 31 & 0x1
@@ -284,7 +283,7 @@ def divi(args):
     l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
     try:
         R[z] = R[x] // __twos_comp(l) if z != 0 else 0x0
-    except ZeroDivisionError as ex:
+    except ZeroDivisionError:
         pass
     R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x20 if args >> 0 & 0xFFFF == 0 else R[31] & ~(1<<0x05)
@@ -300,7 +299,7 @@ def modi(args):
     l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
     try:
         R[z] = R[x] % __twos_comp(l) if z != 0 else 0x0
-    except ZeroDivisionError as ex:
+    except ZeroDivisionError:
         R[z] = 0x0
     R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x20 if args >> 0 & 0xFFFF == 0 else R[31] & ~(1<<0x05)
@@ -454,7 +453,7 @@ def __subarg(args):
     index = args >> 8 & 0b111
     try:
         return subfunc[hex(index)](args)
-    except KeyError as ex1:
+    except KeyError:
         __badinstr()
 
 def __stdout(output):
@@ -486,7 +485,7 @@ def __r(reg):
     }
     try:
         res = registers[reg]
-    except KeyError as ex:
+    except KeyError:
         res = 'r{}'.format(reg)
     return res
 
@@ -504,7 +503,7 @@ def __begin():
     try:
         __write(msg)
         __stdout(msg)
-    except Exception as ex:
+    except Exception:
         print('[Errno ?] Error trying to start program')
 
 def __interrupt():
@@ -513,7 +512,7 @@ def __interrupt():
         __write(msg)
         __stdout(msg)
         sys.exit()
-    except Exception as ex:
+    except Exception:
         print('[Errno ?] Exit with status error')
 
 def __badinstr():

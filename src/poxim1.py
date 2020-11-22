@@ -528,13 +528,14 @@ def __init(line):
 
 def __write(line):
     global bus
-    try:
-        bus.write(line)
-        bus.write('\n')
-    except FileNotFoundError as ex1:
-        print('[Errno ?] Not possible to access bus')
-    except TypeError as ex2:
-        pass
+    if line is not None:
+        try:
+            bus.write(line)
+            bus.write('\n')
+        except FileNotFoundError:
+            print('[Errno ?] Not possible to access bus')
+        except TypeError:
+            pass
 
 def main(args):
     for arg in args:
@@ -563,10 +564,10 @@ def main(args):
                     __write(cmd)                    # Write result to the bus
                     __stdout(cmd)                   # Write to stdout if debug on
                     __loadreg(arg)                  # Load current instruction to IR
-                except KeyError as ex2:
+                except KeyError:
                     __badinstr()
             __interrupt()
-    except IndexError as ex1:
+    except IndexError:
         print('[Errno ?] Output file not provided')
 
 def parse_arg(content):
@@ -575,7 +576,7 @@ def parse_arg(content):
     op = hex(signal >> 26 & 0x7F) # Get the first 6-bits of the instruction
     try:
         return struct[op]         # Return callable operation
-    except KeyError as ex1:
+    except KeyError:
         __badinstr()              # Instruction not listed as valid operation
 
 if __name__ == '__main__':

@@ -332,6 +332,7 @@ def modi(args):
     return cmd, 0
 
 def cmpi(args):
+    global R
     (x, _, _) = __get_index(args)
     l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
     CMPI = R[x] - __twos_comp(l)
@@ -348,11 +349,18 @@ def cmpi(args):
     return cmd, 0
 
 def l8(args):
-    msg = 'op: "l8" NOT IMPLEMENTED'
-    return msg
+    global R
+    (x, _, z) = __get_index(args)
+    l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
+    address = R[x] + l
+    R[z] = __read(address) & 0xFF if z != 0 else 0x0
+    ins = 'l8 {},[{}+{}]'.format(__r(z), __r(x), l).ljust(25)
+    res = 'R{}=MEM[{}]={}'.format(z, __hex(address), __hex(R[z], 4))
+    cmd = '{}:\t{}\t{}'.format(__hex(__pc()), ins, res)
+    __incaddr()
+    return cmd, 0
 
 def l16(args):
-    msg = 'op: "l16" NOT IMPLEMENTED'
     return msg
 
 def l32(args):
@@ -544,6 +552,21 @@ def __badinstr():
     __write(msg)
     __interrupt()
 
+def __overwrite(address, size, content):
+    global MEM
+    index = address // 4
+    buffer = int(MEM[index], 16)
+    byte = {1: 0xFF, 2: 0xFFFF, 3: 0xFFFFFF, 4: 0xFFFFFFFF}
+    MEM[index] = __hex(buffer & ~byte[size] | content & byte[size])
+
+def __read(address=None):
+    global MEM
+    if address is not None:
+        index = address // 4
+        return int(MEM[index], 16)
+    else:
+        return int(MEM, 16)
+
 def __load(prog):
     global MEM
     MEM = prog
@@ -556,7 +579,7 @@ def __init(line):
 def __counter(arg):
     if arg < 0:
         return arg + 1
-    elif arg == 0:
+    elif arg == 0 or arg is None:
         return 1
     else:
         return arg
@@ -606,7 +629,8 @@ def main(args):
                 except TypeError:
                     __badinstr()
             __interrupt()
-    except IndexError:
+    except IndexError as ex:
+        print(ex)
         print('[Errno ?] Output file not provided')
 
 def parse_arg(content):

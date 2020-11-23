@@ -421,8 +421,18 @@ def s32(args):
     return cmd, 0
 
 def bae(args):
-    msg = 'op: "bae" NOT IMPLEMENTED'
-    return msg
+    global R
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    jmp = 0
+    PC  = R[29]
+    if R[31] >> 0 & 0x1 == 0:
+        R[29] = R[29] + 4 + (jmp << 2)
+        jmp = reg
+    else:
+        __incaddr()
+    ins = 'bae {}'.format(jmp).ljust(25)
+    cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
+    return cmd, jmp
 
 def bat(args):
     msg = 'op: "bat" NOT IMPLEMENTED'

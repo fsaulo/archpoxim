@@ -385,8 +385,16 @@ def l32(args):
     return cmd, 0
 
 def s8(args):
-    msg = 'op: "s8" NOT IMPLEMENTED'
-    return msg
+    global R
+    (x, _, z) = __get_index(args)
+    l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
+    address = R[x] + l
+    __overwrite(address, 1, R[z])
+    ins = 's8 [{}+{}],{}'.format(__r(x), l, __r(z)).ljust(25)
+    res = 'MEM[{}]=R{}={}'.format(__hex(address), z, __hex(R[z], 4))
+    cmd = '{}:\t{}\t{}'.format(__hex(__pc()), ins, res)
+    __incaddr()
+    return cmd, 0
 
 def s16(args):
     msg = 'op: "s16" NOT IMPLEMENTED'

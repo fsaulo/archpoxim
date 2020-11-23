@@ -2,8 +2,9 @@ import sys
 
 # Define general purpose registers
 # IR -> R[28], PC -> R[29], SP -> R[30], SR -> R[31]
-R  = [uint32 * 0 for uint32 in range(32)]
-PC = 0
+R   = [uint32 * 0 for uint32 in range(32)]
+MEM = 0
+PC  = 0
 
 def mov(args):
     global R
@@ -11,10 +12,11 @@ def mov(args):
         z    = args >> 21 & 0x1F
         R[z] = args >>  0 & 0x1FFFFF if z != 0 else 0x0
         ins  = 'mov {},{}'.format(__r(z), R[z]).ljust(25)
+        cmd  = '{}:\t{}\tR{}={}'.format(__hex(__pc()), ins, z, __hex(R[z]))
         __incaddr()
-        return '{}:\t{}\tR{}={}'.format(phex(__pc()), ins, z, phex(R[z]))
+        return cmd, 0
     else:
-        __nop()
+        return __nop(), 0
 
 def add(args):
     global R
@@ -29,9 +31,10 @@ def add(args):
     R[31] = R[31] | 0x01 if R[z] >> 32 & 0x1 else R[31] & ~(1<<0x00)
     R[z]  = R[z] & 0xFFFFFFFF if z != 0 else 0x0
     ins = 'add {},{},{}'.format(__r(z), __r(x), __r(y)).ljust(25)
-    res  = 'R{}=R{}+R{}={}'.format(z, x, y, phex(R[z]))
+    res = 'R{}=R{}+R{}={}'.format(z, x, y, __hex(R[z]))
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
     __incaddr()
-    return  '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
+    return cmd, 0
 
 def sub(args):
     global R
@@ -46,9 +49,10 @@ def sub(args):
     R[31] = R[31] | 0x01 if R[z] >> 32 & 0x1 else R[31] & ~(1<<0x0)
     R[z]  = R[z] & 0xFFFFFFFF if z != 0 else 0x0
     ins = 'sub {},{},{}'.format(__r(z), __r(x), __r(y)).ljust(25)
-    res = 'R{}=R{}-R{}={}'.format(z, x, y, phex(R[z]))
+    res = 'R{}=R{}-R{}={}'.format(z, x, y, __hex(R[z]))
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
     __incaddr()
-    return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
+    return cmd, 0
 
 def mul(args):
     (x, y, z) = __get_index(args)
@@ -60,9 +64,10 @@ def mul(args):
     R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x01 if R[l] != 0 else R[31] & ~(1<<0x00)
     ins = 'mul {},{},{},{}'.format(__r(l), __r(z), __r(x), __r(y)).ljust(25)
-    res = 'R{}:R{}=R{}*R{}={}'.format(l, z, x, y, phex(A, 18))
+    res = 'R{}:R{}=R{}*R{}={}'.format(l, z, x, y, __hex(A, 18))
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
     __incaddr()
-    return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
+    return cmd, 0
 
 def sll(args):
     global R
@@ -75,9 +80,10 @@ def sll(args):
     R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x01 if R[z] != 0 else R[31] & ~(1<<0x00)
     ins = 'sll {},{},{},{}'.format(__r(z), __r(x), __r(x), l).ljust(25)
-    res = 'R{}:R{}=R{}:R{}<<{}={}'.format(z, x, z, y, l+1, phex(A, 18))
+    res = 'R{}:R{}=R{}:R{}<<{}={}'.format(z, x, z, y, l+1, __hex(A, 18))
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()),ins, res, __hex(R[31]))
     __incaddr()
-    return '{}:\t{}\t{},SR={}'.format(phex(__pc()),ins, res, phex(R[31]))
+    return cmd, 0
 
 def muls(args):
     (x, y, z) = __get_index(args)
@@ -89,9 +95,10 @@ def muls(args):
     R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x08 if R[l] != 0 else R[31] & ~(1<<0x03)
     ins = 'muls {},{},{},{}'.format(__r(l), __r(z), __r(x), __r(y)).ljust(25)
-    res = 'R{}:R{}=R{}*R{}={}'.format(l, z, x, y, phex(A, 18))
+    res = 'R{}:R{}=R{}*R{}={}'.format(l, z, x, y, __hex(A, 18))
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
     __incaddr()
-    return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
+    return cmd, 0
 
 def sla(args):
     global R
@@ -104,9 +111,10 @@ def sla(args):
     R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x08 if R[z] != 0 else R[31] & ~(1<<0x03)
     ins = 'sla {},{},{},{}'.format(__r(z), __r(x), __r(x), l).ljust(25)
-    res = 'R{}:R{}=R{}:R{}<<{}={}'.format(z, x, z, y, l+1, phex(A, 18))
+    res = 'R{}:R{}=R{}:R{}<<{}={}'.format(z, x, z, y, l+1, __hex(A, 18))
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()),ins, res, __hex(R[31]))
     __incaddr()
-    return '{}:\t{}\t{},SR={}'.format(phex(__pc()),ins, res, phex(R[31]))
+    return cmd, 0
 
 def div(args):
     (x, y, z) = __get_index(args)
@@ -120,9 +128,10 @@ def div(args):
     R[31] = R[31] | 0x20 if R[y] == 0 else R[31] & ~(1<<0x05)
     R[31] = R[31] | 0x01 if R[l] != 0 else R[31] & ~(1<<0x00)
     ins = 'div {},{},{},{}'.format(__r(l), __r(z), __r(x), __r(y)).ljust(25)
-    res = 'R{}=R{}%R{}={},R{}=R{}/R{}={}'.format(l, x, y, phex(R[l]),z, x, y,phex(R[z]))
+    res = 'R{}=R{}%R{}={},R{}=R{}/R{}={}'.format(l, x, y, __hex(R[l]),z, x, y,__hex(R[z]))
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
     __incaddr()
-    return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
+    return cmd, 0
 
 def srl(args):
     global R
@@ -135,9 +144,10 @@ def srl(args):
     R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x01 if R[z] != 0 else R[31] & ~(1<<0x00)
     ins = 'srl {},{},{},{}'.format(__r(z), __r(x), __r(x), l).ljust(25)
-    res = 'R{}:R{}=R{}:R{}>>{}={}'.format(z, x, z, y, l+1, phex(A, 18))
+    res = 'R{}:R{}=R{}:R{}>>{}={}'.format(z, x, z, y, l+1, __hex(A, 18))
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()),ins, res, __hex(R[31]))
     __incaddr()
-    return '{}:\t{}\t{},SR={}'.format(phex(__pc()),ins, res, phex(R[31]))
+    return cmd, 0
 
 def divs(args):
     (x, y, z) = __get_index(args)
@@ -151,9 +161,10 @@ def divs(args):
     R[31] = R[31] | 0x20 if R[y] == 0 else R[31] & ~(1<<0x05)
     R[31] = R[31] | 0x08 if R[l] != 0 else R[31] & ~(1<<0x03)
     ins = 'divs {},{},{},{}'.format(__r(l), __r(z), __r(x), __r(y)).ljust(25)
-    res = 'R{}=R{}%R{}={},R{}=R{}/R{}={}'.format(l, x, y, phex(R[l]),z, x, y,phex(R[z]))
+    res = 'R{}=R{}%R{}={},R{}=R{}/R{}={}'.format(l, x, y, __hex(R[l]),z, x, y,__hex(R[z]))
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
     __incaddr()
-    return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
+    return cmd, 0
 
 def sra(args):
     global R
@@ -166,9 +177,10 @@ def sra(args):
     R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x08 if R[z] != 0 else R[31] & ~(1<<0x03)
     ins = 'sra {},{},{},{}'.format(__r(z), __r(x), __r(x), l).ljust(25)
-    res = 'R{}:R{}=R{}:R{}>>{}={}'.format(z, x, z, y, l+1, phex(A, 18))
+    res = 'R{}:R{}=R{}:R{}>>{}={}'.format(z, x, z, y, l+1, __hex(A, 18))
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()),ins, res, __hex(R[31]))
     __incaddr()
-    return '{}:\t{}\t{},SR={}'.format(phex(__pc()),ins, res, phex(R[31]))
+    return cmd, 0
 
 def cmpx(args):
     global R
@@ -182,8 +194,9 @@ def cmpx(args):
     R[31] = R[31] | 0x08 if Rx31 != Ry31 and CMP31 != Rx31 else R[31] & ~(1<<0x03)
     R[31] = R[31] | 0x01 if CMP >> 32 & 0x1 == 1 else R[31] & ~(1<<0x00)
     ins = 'cmp {},{}'.format(__r(x), __r(y)).ljust(25)
+    cmd = '{}:\t{}\tSR={}'.format(__hex(__pc()), ins, __hex(R[31]))
     __incaddr()
-    return '{}:\t{}\tSR={}'.format(phex(__pc()), ins, phex(R[31]))
+    return cmd, 0
 
 def andx(args):
     global R
@@ -192,9 +205,10 @@ def andx(args):
     R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x10 if R[z] >> 31 & 0x1 == 1 else R[31] & ~(1<<0x04)
     ins = 'and {},{},{}'.format(__r(z), __r(x), __r(y)).ljust(25)
-    res = 'R{}=R{}&R{}={}'.format(z, x, y, phex(R[z]))
+    res = 'R{}=R{}&R{}={}'.format(z, x, y, __hex(R[z]))
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
     __incaddr()
-    return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
+    return cmd, 0
 
 def orx(args):
     global R
@@ -203,9 +217,10 @@ def orx(args):
     R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x10 if R[z] >> 31 & 0x1 == 1 else R[31] & ~(1<<0x04)
     ins = 'or {},{},{}'.format(__r(z), __r(x), __r(y)).ljust(25)
-    res = 'R{}=R{}|R{}={}'.format(z, x, y, phex(R[z]))
+    res = 'R{}=R{}|R{}={}'.format(z, x, y, __hex(R[z]))
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
     __incaddr()
-    return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
+    return cmd, 0
 
 def notx(args):
     global R
@@ -214,9 +229,10 @@ def notx(args):
     R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x10 if R[z] >> 31 & 0x1 == 1 else R[31] & ~(1<<0x04)
     ins = 'not {},{}'.format(__r(z), __r(x)).ljust(25)
-    res = 'R{}=~R{}={}'.format(z, x, phex(R[z]))
+    res = 'R{}=~R{}={}'.format(z, x, __hex(R[z]))
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
     __incaddr()
-    return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
+    return cmd, 0
 
 def xor(args):
     global R
@@ -225,9 +241,10 @@ def xor(args):
     R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x10 if R[z] >> 31 & 0x1 == 1 else R[31] & ~(1<<0x04)
     ins = 'xor {},{},{}'.format(__r(z), __r(x), __r(y)).ljust(25)
-    res = 'R{}=R{}^R{}={}'.format(z, x, y, phex(R[z]))
+    res = 'R{}=R{}^R{}={}'.format(z, x, y, __hex(R[z]))
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
     __incaddr()
-    return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
+    return cmd, 0
 
 def addi(args):
     global R
@@ -243,9 +260,10 @@ def addi(args):
     R[31] = R[31] | 0x01 if R[z] >> 32 & 0x1 else R[31] & ~(1<<0x00)
     R[z]  = R[z] & 0xFFFFFFFF if z != 0 else 0x0
     ins = 'addi {},{},{}'.format(__r(z), __r(z), l).ljust(25)
-    res = 'R{}=R{}+{}={}'.format(z, x, phex(l), phex(R[z]))
+    res = 'R{}=R{}+{}={}'.format(z, x, __hex(l), __hex(R[z]))
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
     __incaddr()
-    return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
+    return cmd, 0
 
 def subi(args):
     global R
@@ -261,9 +279,10 @@ def subi(args):
     R[31] = R[31] | 0x01 if R[z] >> 32 & 0x1 == 1 else R[31] & ~(1<<0x00)
     R[z]  = R[z] & 0xFFFFFFFF if z != 0 else 0x0
     ins = 'subi {},{},{}'.format(__r(z), __r(z), __twos_comp(l, 32)).ljust(25)
-    res = 'R{}=R{}-{}={}'.format(z, x, phex(l), phex(R[z]))
+    res = 'R{}=R{}-{}={}'.format(z, x, __hex(l), __hex(R[z]))
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
     __incaddr()
-    return  '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
+    return cmd, 0
 
 def muli(args):
     global R
@@ -273,9 +292,10 @@ def muli(args):
     R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x08 if R[z] >> 32 & 0xFFFFFFFF == 1 else R[31] & ~(1<<0x03)
     ins = 'muli {},{},{}'.format(__r(z), __r(x), __twos_comp(l)).ljust(25)
-    res = 'R{}=R{}*{}={}'.format(z, x, phex(l), phex(R[z]))
+    res = 'R{}=R{}*{}={}'.format(z, x, __hex(l), __hex(R[z]))
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
     __incaddr()
-    return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
+    return cmd, 0
 
 def divi(args):
     global R
@@ -289,9 +309,10 @@ def divi(args):
     R[31] = R[31] | 0x20 if args >> 0 & 0xFFFF == 0 else R[31] & ~(1<<0x05)
     R[31] = 0
     ins = 'divi {},{},{}'.format(__r(z), __r(x), __twos_comp(l)).ljust(25)
-    res = 'R{}=R{}/{}={}'.format(z, x, phex(l), phex(R[z]))
+    res = 'R{}=R{}/{}={}'.format(z, x, __hex(l), __hex(R[z]))
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
     __incaddr()
-    return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
+    return cmd, 0
 
 def modi(args):
     global R
@@ -305,9 +326,10 @@ def modi(args):
     R[31] = R[31] | 0x20 if args >> 0 & 0xFFFF == 0 else R[31] & ~(1<<0x05)
     R[31] = 0
     ins = 'modi {},{},{}'.format(__r(z), __r(x), __twos_comp(l)).ljust(25)
-    res = 'R{}=R{}%{}={}'.format(z, x, phex(l), phex(R[z]))
+    res = 'R{}=R{}%{}={}'.format(z, x, __hex(l), __hex(R[z]))
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
     __incaddr()
-    return '{}:\t{}\t{},SR={}'.format(phex(__pc()), ins, res, phex(R[31]))
+    return cmd, 0
 
 def cmpi(args):
     (x, _, _) = __get_index(args)
@@ -321,8 +343,9 @@ def cmpi(args):
     R[31] = R[31] | 0x08 if Rx31   != l15 and CMPI31 != Rx31 else R[31] & ~(1<<0x03)
     R[31] = R[31] | 0x01 if CMPI >> 32 & 0x1 == 1 else R[31] & ~(1<<0x00)
     ins = 'cmpi {},{}'.format(__r(x), __twos_comp(l)).ljust(25)
+    cmd = '{}:\t{}\tSR={}'.format(__hex(__pc()), ins, __hex(R[31]))
     __incaddr()
-    return '{}:\t{}\tSR={}'.format(phex(__pc()), ins, phex(R[31]))
+    return cmd, 0
 
 def l8(args):
     msg = 'op: "l8" NOT IMPLEMENTED'
@@ -402,10 +425,13 @@ def bnz(args):
 
 def bun(args):
     global R
-    addr  = phex(R[29])
-    ins   = 'bun {}'.format(args).ljust(25)
-    R[29] =  R[29] + 4 + (args << 2)
-    return '{}:\t{}\tPC={}'.format(addr, ins, phex(R[29]))
+    addr = __hex(R[29])
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x3FFFFFF) & 0xFFFFFFFF
+    jmp = __twos_comp(reg)
+    R[29] = R[29] + 4 + (reg << 2) & 0xFFFFFFFF
+    ins = 'bun {}'.format(jmp).ljust(25)
+    cmd = '{}:\t{}\tPC={}'.format(addr, ins, __hex(R[29]))
+    return cmd, jmp
 
 def bzd(args):
     msg = 'op: "bzd" NOT IMPLEMENTED'
@@ -418,21 +444,21 @@ def movs(args):
     R[z] = (args >> 0 & 0x1FFFFF) | 0xFFE00000 if z != 0 else 0x0
     unum = (args >> 0 & 0x1FFFFF) * sig
     ins  = 'movs {},{}'.format(__r(z), unum).ljust(25)
+    cmd  = '{}:\t{}\tR{}={}'.format(__hex(__pc()), ins, z, __hex(R[z]))
     __incaddr()
-    return '{}:\t{}\tR{}={}'.format(phex(__pc()), ins, z, phex(R[z]))
+    return cmd, 0
 
 def intx(args):
     global R
-    addr  = phex(R[29])
+    addr  = __hex(R[29])
     if (args >> 0 & 0x3FFFFFF) == 0:
         R[29] = 0
         ins   = 'int 0'.ljust(25)
-        cmd   = '{}:\t{}\tCR={},PC={}'.format(addr, ins, phex(0), phex(R[29]))
-        __stdout(cmd)
+        cmd   = '{}:\t{}\tCR={},PC={}'.format(addr, ins, __hex(0), __hex(R[29]))
         __write(cmd)
         __interrupt()
 
-def phex(string, length=10):
+def __hex(string, length=10):
     return '{0:#0{1}X}'.format(string, length).replace('X','x')
 
 def debug_mode(value=False):
@@ -461,10 +487,10 @@ def __stdout(output):
         print(output)
 
 def __nop():
-    pass # Nothing to do here...
+    return None # Nothing to do here...
 
 def __pc():
-    return R[29] - 4
+    return R[29]
 
 def __incaddr():
     global R
@@ -502,7 +528,6 @@ def __begin():
     msg = '[START OF SIMULATION]'
     try:
         __write(msg)
-        __stdout(msg)
     except Exception:
         print('[Errno ?] Error trying to start program')
 
@@ -510,25 +535,37 @@ def __interrupt():
     msg = '[END OF SIMULATION]'
     try:
         __write(msg)
-        __stdout(msg)
         sys.exit()
     except Exception:
         print('[Errno ?] Exit with status error')
 
 def __badinstr():
-    msg = '[INVALID INSTRUCTION @ {}]'.format(phex(R[29]))
+    msg = '[INVALID INSTRUCTION @ {}]'.format(__hex(R[29]))
     __write(msg)
-    __stdout(msg)
     __interrupt()
+
+def __load(prog):
+    global MEM
+    MEM = prog
+    print('[Debug: Loaded {} bytes into memory]'.format(len(prog)*4))
 
 def __init(line):
     global bus
     bus = line
 
+def __counter(arg):
+    if arg < 0:
+        return arg + 1
+    elif arg == 0:
+        return 1
+    else:
+        return arg
+
 def __write(line):
     global bus
     if line is not None:
         try:
+            __stdout(line)
             bus.write(line)
             bus.write('\n')
         except FileNotFoundError:
@@ -551,19 +588,22 @@ def main(args):
 
     try:
         output = sys.argv[2]
+        index  = 0
         with open(output, 'w') as bus:
-            __init(bus)         # Start bus, if file name provided
-            __begin()           # Write starting sentence
-            for instruc in buffer:
-                call = parse_arg(instruc)           # Parse instruction word
+            __init(bus)    # Start bus, if file name provided
+            __load(buffer) # Load program into virtual memory
+            __begin()      # Write starting sentence
+            while index < len(buffer):
+                inst = buffer[index]                # Access buffer at referenced address
+                call = parse_arg(inst)              # Parse instruction word
                 try:
                     word = 0x3FFFFFF                # Define 25-bit extractor
-                    arg = int(instruc, 0x10) & word # Extract 25-bit buffer
-                    cmd = call(arg)                 # Call function with args
+                    arg  = int(inst, 16) & word     # Extract 25-bit buffer
+                    cmd, jmp = call(arg)            # Call function with args
+                    index += __counter(jmp)         # Goes to new address in memory
                     __write(cmd)                    # Write result to the bus
-                    __stdout(cmd)                   # Write to stdout if debug on
                     __loadreg(arg)                  # Load current instruction to IR
-                except KeyError:
+                except TypeError:
                     __badinstr()
             __interrupt()
     except IndexError:

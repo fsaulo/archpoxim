@@ -425,7 +425,9 @@ def bae(args):
     reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
     jmp = 0
     PC  = R[29]
-    if R[31] >> 0 & 0x1 == 0:
+    PC = R[29]
+    CY = R[31] >> 0 & 0x1
+    if CY == 0:
         R[29] = R[29] + 4 + (jmp << 2)
         jmp = reg
     else:

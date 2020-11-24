@@ -669,7 +669,7 @@ def intx(args):
         __write(cmd)
         __interrupt()
 
-def call(args):
+def __subcall(args):
     msg = 'op: "call" NOT IMPLEMENTED'
     return msg, 0
 
@@ -838,12 +838,12 @@ def main(args):
                 inst = buffer[index]            # Access buffer at referenced address
                 call = parse_arg(inst)          # Parse instruction word
                 try:
-                    word = 0x3FFFFFF            # Define 25-bit extractor
-                    arg  = int(inst, 16) & word # Extract 25-bit buffer
+                    word = 0xFFFFFFFF           # Define 32-bit extractor
+                    arg  = int(inst, 16) & word # Extract 32-bit buffer
                     cmd, jmp = call(arg)        # Call function with args
                     index += __counter(jmp)     # Goes to new address in memory
                     __write(cmd)                # Write result to the bus
-                    __loadreg(int(inst, 16))    # Load current instruction to IR
+                    __loadreg(arg)              # Load current instruction to IR
                 except TypeError:
                     __badinstr()
             __interrupt()
@@ -900,8 +900,8 @@ if __name__ == '__main__':
         '0x37': bun,
         '0x38': bzd,
         '0x3f': intx,
-        '0x1e': call,
-        '0x39': call,
+        '0x1e': __subcall,
+        '0x39': __subcall,
         '0x1f': ret,
         '0xa' : push,
         '0xb' : pop

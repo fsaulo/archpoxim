@@ -733,6 +733,7 @@ def __get_index(args):
     return (x, y, z)
 
 def __loadreg(inst):
+    global R
     R[28] = inst
 
 def __begin():
@@ -820,15 +821,15 @@ def main(args):
             __load(buffer) # Load program into virtual memory
             __begin()      # Write starting sentence
             while index < len(buffer):
-                inst = buffer[index]                # Access buffer at referenced address
-                call = parse_arg(inst)              # Parse instruction word
+                inst = buffer[index]            # Access buffer at referenced address
+                call = parse_arg(inst)          # Parse instruction word
                 try:
-                    word = 0x3FFFFFF                # Define 25-bit extractor
-                    arg  = int(inst, 16) & word     # Extract 25-bit buffer
-                    cmd, jmp = call(arg)            # Call function with args
-                    index += __counter(jmp)         # Goes to new address in memory
-                    __write(cmd)                    # Write result to the bus
-                    __loadreg(arg)                  # Load current instruction to IR
+                    word = 0x3FFFFFF            # Define 25-bit extractor
+                    arg  = int(inst, 16) & word # Extract 25-bit buffer
+                    cmd, jmp = call(arg)        # Call function with args
+                    index += __counter(jmp)     # Goes to new address in memory
+                    __write(cmd)                # Write result to the bus
+                    __loadreg(int(inst, 16))    # Load current instruction to IR
                 except TypeError:
                     __badinstr()
             __interrupt()

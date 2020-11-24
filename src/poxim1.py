@@ -424,12 +424,11 @@ def bae(args):
     global R
     reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
     jmp = 0
-    PC  = R[29]
     PC = R[29]
     CY = R[31] >> 0 & 0x1
     if CY == 0:
-        R[29] = R[29] + 4 + (jmp << 2)
         jmp = reg
+        R[29] = R[29] + 4 + (jmp << 2)
     else:
         __incaddr()
     ins = 'bae {}'.format(jmp).ljust(25)
@@ -437,52 +436,192 @@ def bae(args):
     return cmd, jmp
 
 def bat(args):
-    msg = 'op: "bat" NOT IMPLEMENTED'
-    return msg
+    global R
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    jmp = 0
+    PC  = R[29]
+    CY = R[31] >> 0 & 0x1
+    ZN = R[31] >> 6 & 0x1
+    if ZN == 0 and CY == 0:
+        jmp = reg
+        R[29] = R[29] + 4 + (jmp << 2)
+    else:
+        __incaddr()
+    ins = 'bat {}'.format(jmp).ljust(25)
+    cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
+    return cmd, jmp
 
 def bbe(args):
-    msg = 'op: "bbe" NOT IMPLEMENTED'
-    return msg
+    global R
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    jmp = 0
+    PC = R[29]
+    CY = R[31] >> 0 & 0x1
+    ZN = R[31] >> 6 & 0x1
+    if ZN == 1 or CY == 1:
+        jmp = reg
+        R[29] = R[29] + 4 + (jmp << 2)
+    else:
+        __incaddr()
+    ins = 'bbe {}'.format(jmp).ljust(25)
+    cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
+    return cmd, jmp
 
 def bbt(args):
-    msg = 'op: "bbt" NOT IMPLEMENTED'
-    return msg
+    global R
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    jmp = 0
+    PC  = R[29]
+    CY = R[31] >> 0 & 0x1
+    if CY == 1:
+        jmp = reg
+        R[29] = R[29] + 4 + (jmp << 2)
+    else:
+        __incaddr()
+    ins = 'bbt {}'.format(jmp).ljust(25)
+    cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
+    return cmd, jmp
 
 def beq(args):
-    msg = 'op: "beq" NOT IMPLEMENTED'
-    return msg
+    global R
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    jmp = 0
+    PC = R[29]
+    ZN = R[31] >> 6 & 0x1
+    if ZN == 1:
+        jmp = reg
+        R[29] = R[29] + 4 + (jmp << 2)
+    else:
+        __incaddr()
+    ins = 'beq {}'.format(jmp).ljust(25)
+    cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
+    return cmd, jmp
 
 def bge(args):
-    msg = 'op: "bge" NOT IMPLEMENTED'
-    return msg
+    global R
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    jmp = 0
+    PC  = R[29]
+    SN = R[31] >> 4 & 0x1
+    OV = R[31] >> 3 & 0x1
+    if SN == OV:
+        jmp = __twos_comp(reg)
+        R[29] = R[29] + 4 + (jmp << 2)
+    else:
+        __incaddr()
+    ins = 'bge {}'.format(jmp).ljust(25)
+    cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
+    return cmd, jmp
 
 def bgt(args):
-    msg = 'op: "bgt" NOT IMPLEMENTED'
-    return msg
+    global R
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    jmp = 0
+    PC  = R[29]
+    SN = R[31] >> 4 & 0x1
+    OV = R[31] >> 3 & 0x1
+    ZN = R[31] >> 6 & 0x1
+    if ZN == 0 and SN == OV:
+        jmp = __twos_comp(reg)
+        R[29] = R[29] + 4 + (jmp << 2)
+    else:
+        __incaddr()
+    ins = 'bgt {}'.format(jmp).ljust(25)
+    cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
+    return cmd, jmp
 
 def biv(args):
-    msg = 'op: "biv" NOT IMPLEMENTED'
-    return msg
+    global R
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    IV = R[31] >> 2 & 0x1
+    PC = R[29]
+    jmp = 0
+    if IV == 1:
+        jmp = reg
+        R[29] = R[29] + 4 + (reg << 2)
+    else:
+        __incaddr()
+    ins = 'biv {}'.format(jmp).ljust(25)
+    cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
+    return cmd, jmp
 
 def ble(args):
-    msg = 'op: "ble" NOT IMPLEMENTED'
-    return msg
+    global R
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    jmp = 0
+    PC  = R[29]
+    SN = R[31] >> 4 & 0x1
+    OV = R[31] >> 3 & 0x1
+    ZN = R[31] >> 6 & 0x1
+    if ZN == 1 and SN != OV:
+        jmp = __twos_comp(reg)
+        R[29] = R[29] + 4 + (jmp << 2)
+    else:
+        __incaddr()
+    ins = 'ble {}'.format(jmp).ljust(25)
+    cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
+    return cmd, jmp
 
 def blt(args):
-    msg = 'op: "blt" NOT IMPLEMENTED'
-    return msg
+    global R
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    jmp = 0
+    PC  = R[29]
+    SN = R[31] >> 4 & 0x1
+    OV = R[31] >> 3 & 0x1
+    if SN != OV:
+        jmp = __twos_comp(reg)
+        R[29] = R[29] + 4 + (jmp << 2)
+    else:
+        __incaddr()
+    ins = 'blt {}'.format(jmp).ljust(25)
+    cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
+    return cmd, jmp
 
 def bne(args):
-    msg = 'op: "bne" NOT IMPLEMENTED'
-    return msg
+    global R
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    jmp = 0
+    PC  = R[29]
+    ZN = R[31] >> 6 & 0x1
+    if ZN == 0:
+        jmp = reg
+        R[29] = R[29] + 4 + (jmp << 2)
+    else:
+        __incaddr()
+    ins = 'bne {}'.format(jmp).ljust(25)
+    cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
+    return cmd, jmp
 
 def bni(args):
-    msg = 'op: "bni" NOT IMPLEMENTED'
-    return msg
+    global R
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    IV = R[31] >> 2 & 0x1
+    PC = R[29]
+    jmp = 0
+    if IV == 0:
+        jmp = reg
+        R[29] = R[29] + 4 + (reg << 2)
+    else:
+        R[29] + 4
+    ins = 'bni {}'.format(jmp).ljust(25)
+    cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
+    return cmd, jmp
 
 def bnz(args):
-    msg = 'op: "bnz" NOT IMPLEMENTED'
-    return msg
+    global R
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    jmp = 0
+    PC = R[29]
+    ZD = R[31] >> 5 & 0x1
+    if ZD == 0:
+        jmp = reg
+        R[29] = R[29] + 4 + (jmp << 2)
+    else:
+        __incaddr()
+    ins = 'bnz {}'.format(jmp).ljust(25)
+    cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
+    return cmd, jmp
 
 def bun(args):
     global R
@@ -495,8 +634,19 @@ def bun(args):
     return cmd, jmp
 
 def bzd(args):
-    msg = 'op: "bzd" NOT IMPLEMENTED'
-    return msg
+    global R
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    jmp = 0
+    PC = R[29]
+    ZD = R[31] >> 5 & 0x1
+    if ZD == 1:
+        jmp = reg
+        R[29] = R[29] + 4 + (jmp << 2)
+    else:
+        __incaddr()
+    ins = 'bzd {}'.format(jmp).ljust(25)
+    cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
+    return cmd, jmp
 
 def movs(args):
     global R

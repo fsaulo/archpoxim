@@ -428,7 +428,7 @@ def bae(args):
     CY = R[31] >> 0 & 0x1
     if CY == 0:
         jmp = reg
-        R[29] = R[29] + 4 + (jmp << 2)
+        R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
     else:
         __incaddr()
     ins = 'bae {}'.format(jmp).ljust(25)
@@ -444,7 +444,7 @@ def bat(args):
     ZN = R[31] >> 6 & 0x1
     if ZN == 0 and CY == 0:
         jmp = reg
-        R[29] = R[29] + 4 + (jmp << 2)
+        R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
     else:
         __incaddr()
     ins = 'bat {}'.format(jmp).ljust(25)
@@ -460,7 +460,7 @@ def bbe(args):
     ZN = R[31] >> 6 & 0x1
     if ZN == 1 or CY == 1:
         jmp = reg
-        R[29] = R[29] + 4 + (jmp << 2)
+        R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
     else:
         __incaddr()
     ins = 'bbe {}'.format(jmp).ljust(25)
@@ -475,7 +475,7 @@ def bbt(args):
     CY = R[31] >> 0 & 0x1
     if CY == 1:
         jmp = reg
-        R[29] = R[29] + 4 + (jmp << 2)
+        R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
     else:
         __incaddr()
     ins = 'bbt {}'.format(jmp).ljust(25)
@@ -490,7 +490,7 @@ def beq(args):
     ZN = R[31] >> 6 & 0x1
     if ZN == 1:
         jmp = reg
-        R[29] = R[29] + 4 + (jmp << 2)
+        R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
     else:
         __incaddr()
     ins = 'beq {}'.format(jmp).ljust(25)
@@ -506,7 +506,7 @@ def bge(args):
     OV = R[31] >> 3 & 0x1
     if SN == OV:
         jmp = __twos_comp(reg)
-        R[29] = R[29] + 4 + (jmp << 2)
+        R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
     else:
         __incaddr()
     ins = 'bge {}'.format(jmp).ljust(25)
@@ -523,7 +523,7 @@ def bgt(args):
     ZN = R[31] >> 6 & 0x1
     if ZN == 0 and SN == OV:
         jmp = __twos_comp(reg)
-        R[29] = R[29] + 4 + (jmp << 2)
+        R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
     else:
         __incaddr()
     ins = 'bgt {}'.format(jmp).ljust(25)
@@ -538,7 +538,7 @@ def biv(args):
     jmp = 0
     if IV == 1:
         jmp = reg
-        R[29] = R[29] + 4 + (reg << 2)
+        R[29] = R[29] + 4 + (reg << 2) & 0xFFFFFFFF
     else:
         __incaddr()
     ins = 'biv {}'.format(jmp).ljust(25)
@@ -555,7 +555,7 @@ def ble(args):
     ZN = R[31] >> 6 & 0x1
     if ZN == 1 and SN != OV:
         jmp = __twos_comp(reg)
-        R[29] = R[29] + 4 + (jmp << 2)
+        R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
     else:
         __incaddr()
     ins = 'ble {}'.format(jmp).ljust(25)
@@ -571,7 +571,7 @@ def blt(args):
     OV = R[31] >> 3 & 0x1
     if SN != OV:
         jmp = __twos_comp(reg)
-        R[29] = R[29] + 4 + (jmp << 2)
+        R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
     else:
         __incaddr()
     ins = 'blt {}'.format(jmp).ljust(25)
@@ -586,7 +586,7 @@ def bne(args):
     ZN = R[31] >> 6 & 0x1
     if ZN == 0:
         jmp = reg
-        R[29] = R[29] + 4 + (jmp << 2)
+        R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
     else:
         __incaddr()
     ins = 'bne {}'.format(jmp).ljust(25)
@@ -601,7 +601,7 @@ def bni(args):
     jmp = 0
     if IV == 0:
         jmp = reg
-        R[29] = R[29] + 4 + (reg << 2)
+        R[29] = R[29] + 4 + (reg << 2) & 0xFFFFFFFF
     else:
         R[29] + 4
     ins = 'bni {}'.format(jmp).ljust(25)
@@ -616,7 +616,7 @@ def bnz(args):
     ZD = R[31] >> 5 & 0x1
     if ZD == 0:
         jmp = reg
-        R[29] = R[29] + 4 + (jmp << 2)
+        R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
     else:
         __incaddr()
     ins = 'bnz {}'.format(jmp).ljust(25)
@@ -641,7 +641,7 @@ def bzd(args):
     ZD = R[31] >> 5 & 0x1
     if ZD == 1:
         jmp = reg
-        R[29] = R[29] + 4 + (jmp << 2)
+        R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
     else:
         __incaddr()
     ins = 'bzd {}'.format(jmp).ljust(25)
@@ -670,20 +670,92 @@ def intx(args):
         __interrupt()
 
 def __subcall(args):
-    msg = 'op: "call" NOT IMPLEMENTED'
-    return msg, 0
+    (x, _, _) = __get_index(args)
+    op = args >> 26 & 0x3F
+    l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
+    jmp = __twos_comp(l)
+    PC = R[29]
+    SP = R[30]
+    R[30] = R[30] - 4
+    __overwrite(PC, 4, PC+4)
+    if op == 0x1E:
+        R[29] = R[x] + l << 2 & 0xFFFFFFFF
+    elif op == 0x39:
+        R[29] = R[29] + 4 + (l << 2) & 0xFFFFFFFF
+    ins = 'call {}'.format(jmp).ljust(25)
+    res = 'PC={},MEM[{}]={}'.format(__hex(R[29]), __hex(SP), __hex(PC+4))
+    cmd = '{}:\t{}\t{}'.format(__hex(PC), ins, res)
+    return cmd, jmp
 
 def ret(args):
-    msg = 'op: "ret" NOT IMPLEMENTED'
-    return msg, 0
+    global R
+    R[30] += 4
+    PC = R[29]
+    R[29] = __read(R[30])
+    jmp = (PC - R[29]) // 4 if PC >= R[29] else (R[29] - PC) // 4
+    ins = 'ret'.ljust(25)
+    res = 'PC=MEM[{}]={}',format(__hex(R[30]),__hex(R[29]))
+    cmd = '{}:\t{}\t{}'.format(__hex(__pc()), ins, res)
+    __incaddr()
+    return cmd, jmp
 
 def push(args):
-    msg = 'op: "push" NOT IMPLEMENTED'
-    return msg, 0
+    global R
+    (x, y, z) = __get_index(args)
+    v = args >> 6 & 0x3F
+    w = args >> 0 & 0x3F
+    SP = R[30]
+    ins = 'push '
+    res = ''
+    string = ''
+    for chunk in [v, w, x, y, z]:
+        if chunk != 0:
+            __overwrite(R[30], 2, R[chunk])
+            R[30] = R[30] - 4
+            res += '{},'.format(__hex(R[chunk]))
+            string += '{},'.format(__r(chunk))
+        else:
+            if v == 0:
+                cmd = '{}:\tpush -'.format(__hex(__pc())).ljust(25)
+                __incaddr()
+                return cmd + '\tMEM[{}]{{}}={{}}'.format(R[30])
+            break
+
+    fields = string.rstrip(',')
+    res = 'MEM[{}]={{'.format(__hex(SP)) + res.rstrip(',') + ('}={') + fields.upper() + '}'
+    ins = (ins + fields).ljust(25)
+    cmd = '{}:\t{}\t{}'.format(__hex(__pc()), ins, res)
+    __incaddr()
+    return cmd, 0
 
 def pop(args):
-    msg = 'op: "pop" NOT IMPLEMENTED'
-    return msg, 0
+    global R
+    (x, y, z) = __get_index(args)
+    v = args >> 6 & 0x3F
+    w = args >> 0 & 0x3F
+    SP = R[30]
+    ins = 'pop '
+    res = ''
+    string = ''
+    for chunk in [v, w, x, y, z]:
+        if chunk != 0:
+            R[30] = R[30] + 4
+            R[chunk] = __read(R[30])
+            res += '{},'.format(__hex(R[chunk]))
+            string += '{},'.format(__r(chunk))
+        else:
+            if v == 0:
+                cmd = '{}:\pop -'.format(__hex(__pc())).ljust(25)
+                __incaddr()
+                return cmd + '\tMEM[{}]{{}}={{}}'.format(R[30])
+            break
+
+    fields = string.rstrip(',')
+    res = '{' + fields.upper() + '}}=MEM[{}]={{'.format(__hex(SP)) + res.rstrip(',') + ('}')
+    ins = (ins + fields).ljust(25)
+    cmd = '{}:\t{}\t{}'.format(__hex(__pc()), ins, res)
+    __incaddr()
+    return cmd, 0
 
 def __hex(string, length=10):
     return '{0:#0{1}X}'.format(string, length).replace('X','x')
@@ -775,7 +847,10 @@ def __badinstr():
 def __overwrite(address, size, content):
     global MEM
     index = address // 4
-    buffer = int(MEM[index], 16)
+    try:
+        buffer = int(MEM[index], 16)
+    except:
+        buffer = 0x0
     byte = {1: 0xFF, 2: 0xFFFF, 3: 0xFFFFFF, 4: 0xFFFFFFFF}
     MEM[index] = __hex(buffer & ~byte[size] | content & byte[size])
 
@@ -790,6 +865,8 @@ def __read(address=None):
 def __load(prog):
     global MEM
     MEM = prog
+    for byte in range(0x7FFC - len(prog)):
+        MEM.append('')
     print('[Debug: Loaded {} bytes into memory]'.format(len(prog)*4))
 
 def __init(line):
@@ -834,7 +911,7 @@ def main(args):
             __init(bus)    # Start bus, if file name provided
             __load(buffer) # Load program into virtual memory
             __begin()      # Write starting sentence
-            while index < len(buffer):
+            while True:
                 inst = buffer[index]            # Access buffer at referenced address
                 call = parse_arg(inst)          # Parse instruction word
                 try:
@@ -846,19 +923,22 @@ def main(args):
                     __loadreg(arg)              # Load current instruction to IR
                 except TypeError:
                     __badinstr()
+                except Exception:
+                    __interrupt()
             __interrupt()
     except IndexError as ex:
-        print(ex)
-        print('[Errno ?] Output file not provided')
+        pass
 
 def parse_arg(content):
     global struct
-    signal = int(content, 0x10)   # Convert buffer content to uint64
-    op = hex(signal >> 26 & 0x7F) # Get the first 6-bits of the instruction
     try:
-        return struct[op]         # Return callable operation
+        signal = int(content, 16)     # Convert buffer content to uint64
+        op = hex(signal >> 26 & 0x3F) # Get the first 6-bits of the instruction
+        return struct[op]             # Return callable operation
     except KeyError:
-        __badinstr()              # Instruction not listed as valid operation
+        __badinstr()                  # Instruction not listed as valid operation
+    except ValueError:
+        pass
 
 if __name__ == '__main__':
     struct = {
@@ -900,8 +980,8 @@ if __name__ == '__main__':
         '0x37': bun,
         '0x38': bzd,
         '0x3f': intx,
-        '0x1e': __subcall,
         '0x39': __subcall,
+        '0x1e': __subcall,
         '0x1f': ret,
         '0xa' : push,
         '0xb' : pop

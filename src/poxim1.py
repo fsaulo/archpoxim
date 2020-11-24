@@ -628,7 +628,7 @@ def bun(args):
     addr = __hex(R[29])
     reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x3FFFFFF) & 0xFFFFFFFF
     jmp = __twos_comp(reg)
-    R[29] = R[29] + 4 + (reg << 2) & 0xFFFFFFFF
+    R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
     ins = 'bun {}'.format(jmp).ljust(25)
     cmd = '{}:\t{}\tPC={}'.format(addr, ins, __hex(R[29]))
     return cmd, jmp
@@ -668,6 +668,22 @@ def intx(args):
         cmd   = '{}:\t{}\tCR={},PC={}'.format(addr, ins, __hex(0), __hex(R[29]))
         __write(cmd)
         __interrupt()
+
+def call(args):
+    msg = 'op: "call" NOT IMPLEMENTED'
+    return msg, 0
+
+def ret(args):
+    msg = 'op: "ret" NOT IMPLEMENTED'
+    return msg, 0
+
+def push(args):
+    msg = 'op: "push" NOT IMPLEMENTED'
+    return msg, 0
+
+def pop(args):
+    msg = 'op: "pop" NOT IMPLEMENTED'
+    return msg, 0
 
 def __hex(string, length=10):
     return '{0:#0{1}X}'.format(string, length).replace('X','x')
@@ -781,12 +797,10 @@ def __init(line):
     bus = line
 
 def __counter(arg):
-    if arg < 0:
-        return arg + 1
-    elif arg == 0 or arg is None:
+    if arg == 0 or arg is None:
         return 1
     else:
-        return arg
+        return arg + 1
 
 def __write(line):
     global bus
@@ -885,7 +899,12 @@ if __name__ == '__main__':
         '0x36': bnz,
         '0x37': bun,
         '0x38': bzd,
-        '0x3f': intx
+        '0x3f': intx,
+        '0x1e': call,
+        '0x39': call,
+        '0x1f': ret,
+        '0xa' : push,
+        '0xb' : pop
     }
 
     debug = True

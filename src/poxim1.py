@@ -12,7 +12,7 @@ def mov(args):
         z    = args >> 21 & 0x1F
         R[z] = args >>  0 & 0x1FFFFF if z != 0 else 0x0
         ins  = 'mov {},{}'.format(__r(z), R[z]).ljust(25)
-        cmd  = '{}:\t{}\tR{}={}'.format(__hex(__pc()), ins, z, __hex(R[z]))
+        cmd  = '{}:\t{}\t{}={}'.format(__hex(__pc()), ins, __r(z).upper(), __hex(R[z]))
         __incaddr()
         return cmd, 0
     else:
@@ -21,7 +21,7 @@ def mov(args):
 def add(args):
     global R
     (x, y, z) = __get_index(args)
-    R[z] = R[x] + R[y] if z != 0 else 0x0
+    R[z] = R[x] + R[y] & 0xFFFFFFFF if z != 0 else R[z]
     Rx31 = R[x] >> 31 & 0x1
     Ry31 = R[y] >> 31 & 0x1
     Rz31 = R[z] >> 31 & 0x1
@@ -29,7 +29,7 @@ def add(args):
     R[31] = R[31] | 0x10 if Rx31  == 1 else R[31] & ~(1<<0x04)
     R[31] = R[31] | 0x08 if (Rx31 == Ry31) and (Rx31 != Rz31) else R[31] & ~(1<<0x03)
     R[31] = R[31] | 0x01 if R[z] >> 32 & 0x1 else R[31] & ~(1<<0x00)
-    R[z]  = R[z] & 0xFFFFFFFF if z != 0 else 0x0
+    R[z]  = R[z] & 0xFFFFFFFF if z != 0 else R[z]
     ins = 'add {},{},{}'.format(__r(z), __r(x), __r(y)).ljust(25)
     res = 'R{}=R{}+R{}={}'.format(z, x, y, __hex(R[z]))
     cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
@@ -422,7 +422,7 @@ def s32(args):
 
 def bae(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
     jmp = 0
     PC = R[29]
     CY = R[31] >> 0 & 0x1
@@ -437,7 +437,7 @@ def bae(args):
 
 def bat(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
     jmp = 0
     PC  = R[29]
     CY = R[31] >> 0 & 0x1
@@ -453,7 +453,7 @@ def bat(args):
 
 def bbe(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
     jmp = 0
     PC = R[29]
     CY = R[31] >> 0 & 0x1
@@ -469,7 +469,7 @@ def bbe(args):
 
 def bbt(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
     jmp = 0
     PC  = R[29]
     CY = R[31] >> 0 & 0x1
@@ -484,7 +484,7 @@ def bbt(args):
 
 def beq(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
     jmp = 0
     PC = R[29]
     ZN = R[31] >> 6 & 0x1
@@ -499,7 +499,7 @@ def beq(args):
 
 def bge(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
     jmp = 0
     PC  = R[29]
     SN = R[31] >> 4 & 0x1
@@ -515,7 +515,7 @@ def bge(args):
 
 def bgt(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
     jmp = 0
     PC  = R[29]
     SN = R[31] >> 4 & 0x1
@@ -532,7 +532,7 @@ def bgt(args):
 
 def biv(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
     IV = R[31] >> 2 & 0x1
     PC = R[29]
     jmp = 0
@@ -547,7 +547,7 @@ def biv(args):
 
 def ble(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
     jmp = 0
     PC  = R[29]
     SN = R[31] >> 4 & 0x1
@@ -564,7 +564,7 @@ def ble(args):
 
 def blt(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
     jmp = 0
     PC  = R[29]
     SN = R[31] >> 4 & 0x1
@@ -580,22 +580,22 @@ def blt(args):
 
 def bne(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
     jmp = 0
-    PC  = R[29]
+    PC = R[29]
     ZN = R[31] >> 6 & 0x1
     if ZN == 0:
         jmp = reg
-        R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
+        R[29] = R[29] + 4 + (reg << 2) & 0xFFFFFFFF
     else:
         __incaddr()
-    ins = 'bne {}'.format(jmp).ljust(25)
+    ins = 'bne {}'.format(reg).ljust(25)
     cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
     return cmd, jmp
 
 def bni(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
     IV = R[31] >> 2 & 0x1
     PC = R[29]
     jmp = 0
@@ -606,27 +606,27 @@ def bni(args):
         R[29] + 4
     ins = 'bni {}'.format(jmp).ljust(25)
     cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
-    return cmd, jmp
+    return cmd, reg
 
 def bnz(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
-    jmp = 0
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
     PC = R[29]
     ZD = R[31] >> 5 & 0x1
+    jmp = 0
     if ZD == 0:
         jmp = reg
-        R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
+        R[29] = R[29] + 4 + (reg << 2) & 0xFFFFFFFF
     else:
         __incaddr()
-    ins = 'bnz {}'.format(jmp).ljust(25)
+    ins = 'bnz {}'.format(reg).ljust(25)
     cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
     return cmd, jmp
 
 def bun(args):
     global R
     addr = __hex(R[29])
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x3FFFFFF) & 0xFFFFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
     jmp = __twos_comp(reg)
     R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
     ins = 'bun {}'.format(jmp).ljust(25)
@@ -635,26 +635,27 @@ def bun(args):
 
 def bzd(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0xFFFF) & 0x3FFFFFF
-    jmp = 0
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
     PC = R[29]
     ZD = R[31] >> 5 & 0x1
+    jmp = 0
     if ZD == 1:
         jmp = reg
-        R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
+        R[29] = R[29] + 4 + (reg << 2) & 0xFFFFFFFF
     else:
         __incaddr()
-    ins = 'bzd {}'.format(jmp).ljust(25)
+    ins = 'bzd {}'.format(reg).ljust(25)
     cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
     return cmd, jmp
 
 def movs(args):
     global R
-    z    = args >> 21 & 0x1F
-    sig  = (-1) if args >> 0 & 0x100000 else 1
-    R[z] = (args >> 0 & 0x1FFFFF) | 0xFFE00000 if z != 0 else 0x0
-    unum = (args >> 0 & 0x1FFFFF) * sig
-    ins  = 'movs {},{}'.format(__r(z), unum).ljust(25)
+    (x, y, z) = __get_index(args)
+    if z != 0:
+        l = args >> 0 & 0x7FF
+        reg = ((args >> 20 & 0x1) * 0x7FF << 21 | x << 16 | y << 11 | l) & 0xFFFFFFFF
+        R[z] = reg
+    ins  = 'movs {},{}'.format(__r(z), __twos_comp(reg)).ljust(25)
     cmd  = '{}:\t{}\tR{}={}'.format(__hex(__pc()), ins, z, __hex(R[z]))
     __incaddr()
     return cmd, 0
@@ -670,34 +671,37 @@ def intx(args):
         __interrupt()
 
 def __subcall(args):
-    (x, _, _) = __get_index(args)
+    x = args >> 16 & 0x1F   
     op = args >> 26 & 0x3F
     l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
-    jmp = __twos_comp(l)
     PC = R[29]
     SP = R[30]
+    __overwrite(SP, 4, PC+4)
     R[30] = R[30] - 4
-    __overwrite(PC, 4, PC+4)
     if op == 0x1E:
-        R[29] = R[x] + l << 2 & 0xFFFFFFFF
+        reg = __twos_comp(l) + R[x]
+        R[29] = (reg) << 2 & 0xFFFFFFFF
+        jmp = (R[29]-PC) // 4 - 1
+        ins = 'call [{}+{}]'.format(__r(x), reg).ljust(25)
     elif op == 0x39:
-        R[29] = R[29] + 4 + (l << 2) & 0xFFFFFFFF
-    ins = 'call {}'.format(jmp).ljust(25)
+        jmp = __twos_comp(l)
+        R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
+        jmp = (R[29]-PC) // 4 - 1
+        ins = 'call {}'.format(jmp).ljust(25)
     res = 'PC={},MEM[{}]={}'.format(__hex(R[29]), __hex(SP), __hex(PC+4))
     cmd = '{}:\t{}\t{}'.format(__hex(PC), ins, res)
     return cmd, jmp
 
 def ret(args):
     global R
-    R[30] += 4
+    R[30] = R[30] + 4
     PC = R[29]
     R[29] = __read(R[30])
-    jmp = (PC - R[29]) // 4 if PC >= R[29] else (R[29] - PC) // 4
+    jmp = (R[29]-PC) // 4
     ins = 'ret'.ljust(25)
-    res = 'PC=MEM[{}]={}',format(__hex(R[30]),__hex(R[29]))
-    cmd = '{}:\t{}\t{}'.format(__hex(__pc()), ins, res)
-    __incaddr()
-    return cmd, jmp
+    res = 'PC=MEM[{}]={}'.format(__hex(R[30]), __hex(R[29]))
+    cmd = '{}:\t{}\t{}'.format(__hex(PC), ins, res)
+    return cmd, jmp - 1
 
 def push(args):
     global R
@@ -722,7 +726,7 @@ def push(args):
             break
 
     fields = string.rstrip(',')
-    res = 'MEM[{}]={{'.format(__hex(SP)) + res.rstrip(',') + ('}={') + fields.upper() + '}'
+    res = 'MEM[{}]{{'.format(__hex(SP)) + res.rstrip(',') + ('}={') + fields.upper() + '}'
     ins = (ins + fields).ljust(25)
     cmd = '{}:\t{}\t{}'.format(__hex(__pc()), ins, res)
     __incaddr()
@@ -751,7 +755,7 @@ def pop(args):
             break
 
     fields = string.rstrip(',')
-    res = '{' + fields.upper() + '}}=MEM[{}]={{'.format(__hex(SP)) + res.rstrip(',') + ('}')
+    res = '{' + fields.upper() + '}}=MEM[{}]{{'.format(__hex(SP)) + res.rstrip(',') + ('}')
     ins = (ins + fields).ljust(25)
     cmd = '{}:\t{}\t{}'.format(__hex(__pc()), ins, res)
     __incaddr()
@@ -860,7 +864,7 @@ def __read(address=None):
         index = address // 4
         return int(MEM[index], 16)
     else:
-        return int(MEM, 16)
+        return MEM
 
 def __load(prog):
     global MEM
@@ -868,6 +872,15 @@ def __load(prog):
     for byte in range(0x7FFC - len(prog)):
         MEM.append('')
     print('[Debug: Loaded {} bytes into memory]'.format(len(prog)*4))
+
+def __stack():
+    global MEM
+    for index, line in enumerate(MEM[::]):
+        if line != '':
+            if R[30] == (index - 0x7FFC) // 4:
+                __stdout('-> {}'.format(line))
+            else:    
+                __stdout(line)
 
 def __init(line):
     global bus

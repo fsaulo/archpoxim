@@ -896,7 +896,7 @@ def __load(prog):
     MEM = prog
     for byte in range(0x7FFC - len(prog)):
         MEM.append('')
-    print('[Debug: Loaded {} bytes into memory]'.format(len(prog)*4))
+    __stdout('[Debug: Loaded {} bytes into memory]'.format(len(prog)*4))
 
 def __stack():
     global MEM
@@ -1025,6 +1025,6 @@ if __name__ == '__main__':
         '0xb' : pop
     }
 
-    debug = True
+    debug = False
     bus   = None
     main(sys.argv)

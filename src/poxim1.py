@@ -728,6 +728,7 @@ def push(args):
     for chunk in [v, w, x, y, z]:
         if chunk != 0:
             __overwrite(R[30], 2, R[chunk])
+            __overwrite(R[30], 4, R[chunk])
             R[30] = R[30] - 4
             res += '{},'.format(__hex(R[chunk]))
             string += '{},'.format(__r(chunk))

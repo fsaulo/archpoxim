@@ -320,11 +320,24 @@ def modi(args):
     l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
     try:
         R[z] = R[x] % __twos_comp(l) if z != 0 else 0x0
+        from math import remainder, copysign
+        signrx = copysign(1, __twos_comp(R[x]))
+        signl = copysign(1, __twos_comp(l))
+        if signl == signrx:
+            reg = remainder(R[x], l) if z != 0 else R[z]
+        elif signl < 0:
+            reg = remainder(R[x], __twos_comp(l)) if z != 0 else R[z]
+        elif signrx < 0:
+            reg = remainder(__twos_comp(R[x]), l) if z != 0 else R[z]
+        R[z] = int(reg) + 2 ** 32 & 0xFFFFFFFF if z != 0 else R[z]
+        print('R[x] % l = {} % {} = {}'.format(__hex(R[x]), __hex(l), __hex(R[z])))
     except ZeroDivisionError:
-        R[z] = 0x0
+        pass
+    except Exception:
+        __stdout('[Error ?] Can not resolve for library imports')
     R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x20 if args >> 0 & 0xFFFF == 0 else R[31] & ~(1<<0x05)
-    R[31] = 0
+    R[31] &= ~(1<<0x03)
     ins = 'modi {},{},{}'.format(__r(z), __r(x), __twos_comp(l)).ljust(25)
     res = 'R{}=R{}%{}={}'.format(z, x, __hex(l), __hex(R[z]))
     cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))

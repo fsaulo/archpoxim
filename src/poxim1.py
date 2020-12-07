@@ -858,12 +858,13 @@ def __begin():
     try:
         __write(msg)
     except Exception:
-        print('[Errno ?] Error trying to start program')
+        print('[Errno ?] Error trying to start simulation')
 
 def __interrupt():
     msg = '[END OF SIMULATION]'
     try:
         __write(msg)
+        __stdout('[Debub: Software interruption code {}]'.format(__hex(0)))
         sys.exit()
     except Exception:
         print('[Errno ?] Exit with status error')
@@ -882,6 +883,7 @@ def __overwrite(address, size, content):
         buffer = 0x0
     byte = {1: 0xFF, 2: 0xFFFF, 3: 0xFFFFFF, 4: 0xFFFFFFFF}
     MEM[index] = __hex(buffer & ~byte[size] | content & byte[size])
+    __stdout('[Debug: Written {} to address {}]'.format(__hex(content), __hex(address)))
 
 def __read(address=None):
     global MEM
@@ -890,12 +892,13 @@ def __read(address=None):
         return int(MEM[index], 16)
     else:
         return MEM
+    __stdout('[Debug: Read from memory @ {}]'.format(__hex(address)))
 
 def __load(prog):
     global MEM
     MEM = prog
     for byte in range(0x7FFC - len(prog)):
-        MEM.append('')
+        MEM.append('0x00000000') # Fill not used memory addresses with nop instruction
     __stdout('[Debug: Loaded {} bytes into memory]'.format(len(prog)*4))
 
 def __stack():
@@ -910,6 +913,7 @@ def __stack():
 def __init(line):
     global bus
     bus = line
+    __stdout('[Debug: Received signal from the bus]')
 
 def __counter(arg):
     if arg == 0 or arg is None:

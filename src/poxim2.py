@@ -779,7 +779,6 @@ def pop(args):
 
 def reti(args):
     global R
-    # __save_context()
     PC  = R[29]
     res = ''
     for index in (27, 26, 29):
@@ -793,10 +792,10 @@ def reti(args):
     return cmd, jmp - 1
 
 def cbr(args):
-    x, _, z = __get_index(args)
+    _, _, z = __get_index(args)
     R[z] &= ~(1<<0x00) if z != 0 else R[z]
     cmd = ''
-    return cmd, 0
+    return cmd
 
 def sbr(args):
     x, _, z = __get_index(args)
@@ -808,7 +807,7 @@ def sbr(args):
 
 def __clear_bit(args):
     l = args >> 0 & 0x1
-    cmd = crb(args) if l == 0 else sbr(args)
+    cmd = cbr(args) if l == 0 else sbr(args)
     return cmd, 0
 
 def __save_context():
@@ -840,7 +839,7 @@ def __subarg(args):
     try:
         return subfunc[hex(index)](args)
     except KeyError:
-        __badinstr()
+        __badinstr(args)
 
 def __stdout(output):
     if debug:
@@ -904,10 +903,17 @@ def __interrupt(pr=0):
         except Exception:
             print('[Errno ?] Exit with status error')
 
-def __badinstr():
+def __badinstr(args):
+    global R
+    __save_context()
     msg = '[INVALID INSTRUCTION @ {}]'.format(__hex(R[29]))
-    __write(msg)
-    __interrupt()
+    PC = R[29]
+    R[26] = args >> 26 & 0x3F
+    R[27] = R[29]
+    R[29] = 0x4
+    R[31] |= 0x04
+    cmd = msg + '\n[SOFTWARE INTERRUPTION]'
+    return cmd, ((R[29] - PC) // 4) - 1
 
 def __overwrite(address, size, content):
     global MEM
@@ -996,12 +1002,14 @@ def main(args):
                     __write(cmd)                # Write result to the bus
                     __loadreg(arg)              # Load current instruction to IR
                 except TypeError:
-                    __badinstr()
-                except Exception:
+                    __badinstr(arg)
+                except Exception as ex1:
+                    __stdout(ex1)
                     __interrupt()
             __interrupt()
     except IndexError as ex:
-        pass
+        __stdout(ex)
+        __stdout('[Debug: Wrong argument]')
 
 def parse_arg(content):
     global struct
@@ -1010,9 +1018,9 @@ def parse_arg(content):
         op = hex(signal >> 26 & 0x3F) # Get the first 6-bits of the instruction
         return struct[op]             # Return callable operation
     except KeyError:
-        __badinstr()                  # Instruction not listed as valid operation
-    except ValueError:
-        pass
+        return __badinstr             # Instruction not listed as valid operation
+    except ValueError as ex:
+        __stdout('[Debug: Error while trying to parse arguments]')
 
 if __name__ == '__main__':
     struct = {

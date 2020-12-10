@@ -120,21 +120,31 @@ def div(args):
     (x, y, z) = __get_index(args)
     sw_int = False
     l = args >> 0  & 0x1F
+    jmp = 0
+
     try:
         R[l] = R[x] %  R[y] if l != 0 else 0
         R[z] = R[x] // R[y] if z != 0 else 0
+        __incaddr()
     except ZeroDivisionError:
+        __save_context()
         msg = '\n[SOFTWARE INTERRUPTION]'
         sw_int = True
+        PC = R[29]
+        if (R[31] >> 1 & 0x1) == 1:
+            R[27] = R[29]
+            R[26] = 0
+            R[29] = 0x8
+            jmp = ((R[29] - PC) // 4) - 1
+
     R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x20 if R[y] == 0 else R[31] & ~(1<<0x05)
     R[31] = R[31] | 0x01 if R[l] != 0 else R[31] & ~(1<<0x00)
     ins = 'div {},{},{},{}'.format(__r(l), __r(z), __r(x), __r(y)).ljust(25)
     res = 'R{}=R{}%R{}={},R{}=R{}/R{}={}'.format(l, x, y, __hex(R[l]),z, x, y,__hex(R[z]))
-    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
-    __incaddr()
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(PC), ins, res, __hex(R[31]))
     if sw_int: cmd += msg
-    return cmd, 0
+    return cmd, jmp
 
 def srl(args):
     global R
@@ -155,11 +165,23 @@ def srl(args):
 def divs(args):
     (x, y, z) = __get_index(args)
     l = args >> 0  & 0x1F
+    sw_int = False
+    jmp = 0
+
     try:
         R[l] = R[x] %  R[y] if l != 0 else 0
         R[z] = R[x] // R[y] if z != 0 else 0
     except ZeroDivisionError:
-        pass
+        __save_context()
+        msg = '\n[SOFTWARE INTERRUPTION]'
+        sw_int = True
+        PC = R[29]
+        if (R[31] >> 1 & 0x1) == 1:
+            R[27] = R[29]
+            R[26] = 0
+            R[29] = 0x8
+            jmp = ((R[29] - PC) // 4) - 1
+
     R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x20 if R[y] == 0 else R[31] & ~(1<<0x05)
     R[31] = R[31] | 0x08 if R[l] != 0 else R[31] & ~(1<<0x03)
@@ -167,7 +189,8 @@ def divs(args):
     res = 'R{}=R{}%R{}={},R{}=R{}/R{}={}'.format(l, x, y, __hex(R[l]),z, x, y,__hex(R[z]))
     cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
     __incaddr()
-    return cmd, 0
+    if sw_int: cmd += msg
+    return cmd, jmp
 
 def sra(args):
     global R
@@ -304,10 +327,22 @@ def divi(args):
     global R
     (x, _, z) = __get_index(args)
     l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
+    jmp = 0
+    sw_int = False
+
     try:
         R[z] = R[x] // __twos_comp(l) if z != 0 else 0x0
     except ZeroDivisionError:
-        pass
+        __save_context()
+        msg = '\n[SOFTWARE INTERRUPTION]'
+        sw_int = True
+        PC = R[29]
+        if (R[31] >> 1 & 0x1) == 1:
+            R[27] = R[29]
+            R[26] = 0
+            R[29] = 0x8
+            jmp = ((R[29] - PC) // 4) - 1
+
     R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x20 if args >> 0 & 0xFFFF == 0 else R[31] & ~(1<<0x05)
     R[31] = 0
@@ -315,16 +350,30 @@ def divi(args):
     res = 'R{}=R{}/{}={}'.format(z, x, __hex(l), __hex(R[z]))
     cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
     __incaddr()
+    if sw_int: cmd += msg
     return cmd, 0
 
 def modi(args):
     global R
     (x, _, z) = __get_index(args)
     l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
+    jmp = 0
+    sw_int = False
+
     try:
         R[z] = R[x] % __twos_comp(l) if z != 0 else 0x0
     except ZeroDivisionError:
         R[z] = 0x0
+        __save_context()
+        msg = '\n[SOFTWARE INTERRUPTION]'
+        sw_int = True
+        PC = R[29]
+        if (R[31] >> 1 & 0x1) == 1:
+            R[27] = R[29]
+            R[26] = 0
+            R[29] = 0x8
+            jmp = ((R[29] - PC) // 4) - 1
+
     R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x20 if args >> 0 & 0xFFFF == 0 else R[31] & ~(1<<0x05)
     R[31] = 0
@@ -332,7 +381,8 @@ def modi(args):
     res = 'R{}=R{}%{}={}'.format(z, x, __hex(l), __hex(R[z]))
     cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
     __incaddr()
-    return cmd, 0
+    if sw_int: cmd += msg
+    return cmd, jmp
 
 def cmpi(args):
     global R

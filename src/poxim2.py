@@ -5,6 +5,7 @@ import sys
 R   = [uint32 * 0 for uint32 in range(32)]
 MEM = 0
 PC  = 0
+WDG = 1
 
 def mov(args):
     global R
@@ -979,7 +980,16 @@ def __read(address=None):
     global MEM
     if address is not None:
         index = address // 4
-        return int(MEM[index], 16)
+        if index <= 0x7FFC:
+            return int(MEM[index], 16)
+        else:
+            devices = {
+                '0x80808080' : __watchdog,
+                '0x88888888' : __terminal
+            }
+            
+            for i in range(0x80808880, 0x8080888C): devices[hex(i)] = __fpu
+            return devices[hex(index)]()
     else:
         return MEM
 
@@ -996,14 +1006,14 @@ def __stack():
         if line != '':
             if R[30] == (index - 0x7FFC) // 4:
                 __stdout('-> {}'.format(line))
-            else:    
+            else:
                 __stdout(line)
 
 def __init(line):
     global bus
     bus = line
 
-def __counter(arg):
+def __goto(arg):
     if arg == 0 or arg is None:
         return 1
     else:
@@ -1021,6 +1031,16 @@ def __write(line):
         except TypeError:
             pass
 
+def __watchdog(counter):
+    global WDG
+    if WDG == 1:                 # Watchdog enabled
+        if counter > 0: 
+            counter -= 1         # Decrement counter
+        else: 
+            counter = 0x7FFFFFFF # Reset counter
+            WDG = 0              # Disable watchdog
+    return counter
+
 def main(args):
     for arg in args:
         if arg == '--debug':
@@ -1036,7 +1056,8 @@ def main(args):
 
     try:
         output = sys.argv[2]
-        index  = 0
+        index = 0
+        timer = 0x7FFFFFFF
         with open(output, 'w') as bus:
             __init(bus)    # Start bus, if file name provided
             __load(buffer) # Load program into virtual memory
@@ -1048,7 +1069,8 @@ def main(args):
                     word = 0xFFFFFFFF           # Define 32-bit extractor
                     arg  = int(inst, 16) & word # Extract 32-bit buffer
                     cmd, jmp = call(arg)        # Call function with args
-                    index += __counter(jmp)     # Goes to new address in memory
+                    index += __goto(jmp)        # Goes to new address in memory
+                    # timer = __watchdog(timer)   # Update watchdog countdown
                     __write(cmd)                # Write result to the bus
                     __loadreg(arg)              # Load current instruction to IR
                 except TypeError:

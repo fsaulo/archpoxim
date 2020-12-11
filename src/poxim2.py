@@ -6,6 +6,7 @@ R   = [uint32 * 0 for uint32 in range(32)]
 MEM = 0
 PC  = 0
 WDG = 1
+DEV = 0
 
 def mov(args):
     global R
@@ -974,7 +975,11 @@ def __overwrite(address, size, content):
     except:
         buffer = 0x0
     byte = {1: 0xFF, 2: 0xFFFF, 3: 0xFFFFFF, 4: 0xFFFFFFFF}
-    MEM[index] = __hex(buffer & ~byte[size] | content & byte[size])
+    if index <= 0x7FFC:
+        MEM[index] = __hex(buffer & ~byte[size] | content & byte[size])
+    else:
+        DEV = index
+
 
 def __read(address=None):
     global MEM
@@ -1031,7 +1036,13 @@ def __write(line):
         except TypeError:
             pass
 
-def __watchdog(counter):
+def __watchdog():
+    global WDG
+    if R[31] >> 1 & 0x1 == 1:
+        # __save_context()
+        pass
+
+def __count(counter):
     global WDG
     if WDG == 1:                 # Watchdog enabled
         if counter > 0: 
@@ -1051,7 +1062,7 @@ def main(args):
         with open(file, 'r') as bus:
             buffer = bus.read().splitlines()
     except FileNotFoundError as exception:
-        print(exception)
+        __stdout(exception)
         sys.exit()
 
     try:
@@ -1070,7 +1081,7 @@ def main(args):
                     arg  = int(inst, 16) & word # Extract 32-bit buffer
                     cmd, jmp = call(arg)        # Call function with args
                     index += __goto(jmp)        # Goes to new address in memory
-                    # timer = __watchdog(timer)   # Update watchdog countdown
+                    timer = __count(timer)      # Update watchdog countdown
                     __write(cmd)                # Write result to the bus
                     __loadreg(arg)              # Load current instruction to IR
                 except TypeError:

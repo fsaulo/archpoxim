@@ -1,4 +1,3 @@
-
 [START OF SIMULATION]
 0x00000000:	bun 14                   	PC=0x0000003C
 0x0000003C:	mov sp,32764             	SP=0x00007FFC

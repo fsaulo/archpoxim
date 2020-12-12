@@ -3,9 +3,10 @@ import sys
 # Define general purpose registers
 # CR -> R[26], IPC -> R[27], IR -> R[28], PC -> R[29], SP -> R[30], SR -> R[31]
 R   = [uint32 * 0 for uint32 in range(32)]
+CNT = 0x7FFFFFFF
+WDG = 1
 MEM = 0
 PC  = 0
-WDG = 1
 DEV = 0
 
 def mov(args):
@@ -477,7 +478,7 @@ def s32(args):
 
 def bae(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x3FFFFFF) & 0xFFFFFFFF
     jmp = 0
     PC = R[29]
     CY = R[31] >> 0 & 0x1
@@ -492,7 +493,7 @@ def bae(args):
 
 def bat(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x3FFFFFF) & 0xFFFFFFFF
     jmp = 0
     PC  = R[29]
     CY = R[31] >> 0 & 0x1
@@ -508,7 +509,7 @@ def bat(args):
 
 def bbe(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x3FFFFFF) & 0xFFFFFFFF
     jmp = 0
     PC = R[29]
     CY = R[31] >> 0 & 0x1
@@ -524,7 +525,7 @@ def bbe(args):
 
 def bbt(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x3FFFFFF) & 0xFFFFFFFF
     jmp = 0
     PC  = R[29]
     CY = R[31] >> 0 & 0x1
@@ -539,7 +540,7 @@ def bbt(args):
 
 def beq(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x3FFFFFF) & 0xFFFFFFFF
     jmp = 0
     PC = R[29]
     ZN = R[31] >> 6 & 0x1
@@ -554,7 +555,7 @@ def beq(args):
 
 def bge(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x3FFFFFF) & 0xFFFFFFFF
     jmp = 0
     PC  = R[29]
     SN = R[31] >> 4 & 0x1
@@ -570,7 +571,7 @@ def bge(args):
 
 def bgt(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x3FFFFFF) & 0xFFFFFFFF
     jmp = 0
     PC  = R[29]
     SN = R[31] >> 4 & 0x1
@@ -587,7 +588,7 @@ def bgt(args):
 
 def biv(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x3FFFFFF) & 0xFFFFFFFF
     IV = R[31] >> 2 & 0x1
     PC = R[29]
     jmp = 0
@@ -602,7 +603,7 @@ def biv(args):
 
 def ble(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x3FFFFFF) & 0xFFFFFFFF
     jmp = 0
     PC  = R[29]
     SN = R[31] >> 4 & 0x1
@@ -619,7 +620,7 @@ def ble(args):
 
 def blt(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x3FFFFFF) & 0xFFFFFFFF
     jmp = 0
     PC  = R[29]
     SN = R[31] >> 4 & 0x1
@@ -635,7 +636,7 @@ def blt(args):
 
 def bne(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x3FFFFFF) & 0xFFFFFFFF
     jmp = 0
     PC = R[29]
     ZN = R[31] >> 6 & 0x1
@@ -650,7 +651,7 @@ def bne(args):
 
 def bni(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x3FFFFFF) & 0xFFFFFFFF
     IV = R[31] >> 2 & 0x1
     PC = R[29]
     jmp = 0
@@ -665,7 +666,7 @@ def bni(args):
 
 def bnz(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x3FFFFFF) & 0xFFFFFFFF
     PC = R[29]
     ZD = R[31] >> 5 & 0x1
     jmp = 0
@@ -681,7 +682,7 @@ def bnz(args):
 def bun(args):
     global R
     addr = __hex(R[29])
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x3FFFFFF) & 0xFFFFFFFF
     jmp = __twos_comp(reg)
     R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
     ins = 'bun {}'.format(jmp).ljust(25)
@@ -690,7 +691,7 @@ def bun(args):
 
 def bzd(args):
     global R
-    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x1FFFFFF) & 0xFFFFFFFF
+    reg = ((args >> 25 & 0x1) * 0x3F << 26 | args >> 0 & 0x3FFFFFF) & 0xFFFFFFFF
     PC = R[29]
     ZD = R[31] >> 5 & 0x1
     jmp = 0
@@ -732,7 +733,7 @@ def intx(args):
         R[26] = l
         R[27] = R[29]
         R[29] = 0xC
-        ins = 'int 5'.ljust(25)
+        ins = 'int {}'.format(l).ljust(25)
         res = '{}={},{}={}'.format(__r(26, True), __hex(R[26]), __r(29, True), __hex(R[29]))
         cmd = '{}:\t{}\t{}'.format(__hex(PC), ins, res) + '\n[SOFTWARE INTERRUPTION]'
         jmp = (R[29] - PC) // 4
@@ -943,7 +944,7 @@ def __begin():
     try:
         __write(msg)
     except Exception:
-        print('[Errno ?] Error trying to start program')
+        __stdout('[Errno ?] Error trying to start program')
 
 def __interrupt(pr=0):
     global R
@@ -953,7 +954,14 @@ def __interrupt(pr=0):
             __write(msg)
             sys.exit()
         except Exception:
-            print('[Errno ?] Exit with status error')
+            __stdout('[Errno ?] Exit with status error')
+    else:
+        msg = '[HARDWARE INTERRUPTION {}]'.format(pr)
+        if pr == 1:
+            __write(msg)
+            return 1
+        else:
+            return 0
 
 def __badinstr(args):
     global R
@@ -970,31 +978,40 @@ def __badinstr(args):
 def __overwrite(address, size, content):
     global MEM
     index = address // 4
+
     try:
         buffer = int(MEM[index], 16)
     except:
         buffer = 0x0
     byte = {1: 0xFF, 2: 0xFFFF, 3: 0xFFFFFF, 4: 0xFFFFFFFF}
+
+    # Device multiplexer. Interchange between devices attached to the bus
+    # Terminal : address -> 0x88888888
+    # Watchdog : address -> 0x80808080
+    # Memory   : address -> 0x00000000 : 0x00007FFC
+    # FPU      : address -> 0x80808880 : 0x8080888C
     if index <= 0x7FFC:
         MEM[index] = __hex(buffer & ~byte[size] | content & byte[size])
     else:
-        DEV = index
+        devices = {
+            '0x80808080' : __watchdog, 
+            '0x88888888' : __terminal 
+        }
+        for i in range(0x80808880, 0x8080888C): devices[hex(i)] = __fpu
 
+        try:
+            devices[hex(address)](content)
+        except IndexError as ex:
+            __stdout(ex)
 
 def __read(address=None):
-    global MEM
+    global MEM, DEV, CNT, WDG
     if address is not None:
         index = address // 4
         if index <= 0x7FFC:
             return int(MEM[index], 16)
         else:
-            devices = {
-                '0x80808080' : __watchdog,
-                '0x88888888' : __terminal
-            }
-            
-            for i in range(0x80808880, 0x8080888C): devices[hex(i)] = __fpu
-            return devices[hex(index)]()
+            return WDG << 31 | CNT
     else:
         return MEM
 
@@ -1002,23 +1019,32 @@ def __load(prog):
     global MEM
     MEM = prog
     for byte in range(0x7FFC - len(prog)):
-        MEM.append('0x0')
-    print('[Debug: Loaded {} bytes into memory]'.format(len(prog)*4))
+        MEM.append(__hex(0))
+    __stdout('[Debug: Loaded {} bytes into memory]'.format(len(prog)*4))
 
 def __stack():
     global MEM
-    for index, line in enumerate(MEM[::]):
-        if line != '':
-            if R[30] == (index - 0x7FFC) // 4:
-                __stdout('-> {}'.format(line))
-            else:
-                __stdout(line)
+    for line in MEM[::]:
+        if line != __hex(0):
+            __stdout(line)
 
 def __init(line):
     global bus
     bus = line
 
-def __goto(arg):
+def __goto_intr(code):
+    global R
+    # Jump to interruption address.
+    # HW1 : code == 1 -> address => 0x00000010
+    # HW2 : code == 2 -> address => 0x00000014    
+    # HW3 : code == 3 -> address => 0x00000018
+    # HW4 : code == 4 -> address => 0x0000001C
+    address = (3 + code) * 4     # Begin at 0x6 + '4*code'
+    jmp = (address - R[29]) // 4 # Branch 'jmp' adresses
+    R[29] = address              # Update program counter with new address
+    return jmp
+
+def __goto(arg, irs=0):
     if arg == 0 or arg is None:
         return 1
     else:
@@ -1032,25 +1058,39 @@ def __write(line):
             bus.write(line)
             bus.write('\n')
         except FileNotFoundError:
-            print('[Errno ?] Not possible to access bus')
+            __stdout('[Errno ?] Not possible to access bus')
         except TypeError:
             pass
 
-def __watchdog():
-    global WDG
-    if R[31] >> 1 & 0x1 == 1:
-        # __save_context()
-        pass
+def __terminal(content):
+    pass
 
-def __count(counter):
-    global WDG
-    if WDG == 1:                 # Watchdog enabled
-        if counter > 0: 
-            counter -= 1         # Decrement counter
+def __fpu(content):
+    pass
+
+def __watchdog(content):
+    global WDG, DEV, CNT
+    R[26] = 0xE1AC04DA
+    DEV = 0x80808080
+    CNT = content & 0x7FFFFFFF
+    WDG = content >> 31 & 0x1
+
+def __countdown():
+    global WDG, CNT, ISR, R
+    if WDG == 1:                  # Watchdog enabled
+        if CNT > 1: 
+            CNT -= 1              # Decrement counter
         else: 
-            counter = 0x7FFFFFFF # Reset counter
-            WDG = 0              # Disable watchdog
-    return counter
+            CNT = 0x7FFFFFFF      # Reset counter
+            WDG = 0               # Disable watchdog
+        return 0
+    else:
+        R[26] = 0xE1AC04DA
+        if R[31] >> 1 & 0x1 == 1: # If interruption enabled
+            WDG = 1               # Disable watchdog
+            R[27] = R[29]         # Store interruption address
+            return __interrupt(1) # Return interruption status
+    return 0
 
 def main(args):
     for arg in args:
@@ -1068,7 +1108,6 @@ def main(args):
     try:
         output = sys.argv[2]
         index = 0
-        timer = 0x7FFFFFFF
         with open(output, 'w') as bus:
             __init(bus)    # Start bus, if file name provided
             __load(buffer) # Load program into virtual memory
@@ -1077,12 +1116,15 @@ def main(args):
                 inst = buffer[index]            # Access buffer at referenced address
                 call = parse_arg(inst)          # Parse instruction word
                 try:
+                    irs  = __countdown()        # Update watchdog countdown & get interruption status
                     word = 0xFFFFFFFF           # Define 32-bit extractor
                     arg  = int(inst, 16) & word # Extract 32-bit buffer
                     cmd, jmp = call(arg)        # Call function with args
-                    index += __goto(jmp)        # Goes to new address in memory
-                    timer = __count(timer)      # Update watchdog countdown
-                    __write(cmd)                # Write result to the bus
+                    if irs != 0:
+                        index += __goto_intr(irs)
+                    else:
+                        index += __goto(jmp)    # Goes to new address in memory
+                        __write(cmd)            # Write result to the bus
                     __loadreg(arg)              # Load current instruction to IR
                 except TypeError:
                     __badinstr(arg)
@@ -1095,17 +1137,6 @@ def main(args):
         __stdout('[Debug: Wrong argument]')
 
 def parse_arg(content):
-    global struct
-    try:
-        signal = int(content, 16)     # Convert buffer content to uint64
-        op = hex(signal >> 26 & 0x3F) # Get the first 6-bits of the instruction
-        return struct[op]             # Return callable operation
-    except KeyError:
-        return __badinstr             # Instruction not listed as valid operation
-    except ValueError as ex:
-        __stdout('[Debug: Error while trying to parse arguments]')
-
-if __name__ == '__main__':
     struct = {
         '0x0' : mov,
         '0x1' : movs,
@@ -1153,7 +1184,17 @@ if __name__ == '__main__':
         '0x20': reti,
         '0x21': __clear_bit
     }
+    
+    try:
+        signal = int(content, 16)     # Convert buffer content to uint64
+        op = hex(signal >> 26 & 0x3F) # Get the first 6-bits of the instruction
+        return struct[op]             # Return callable operation
+    except KeyError:
+        return __badinstr             # Instruction not listed as valid operation
+    except ValueError as ex:
+        __stdout('[Debug: Error while trying to parse arguments]')
 
+if __name__ == '__main__':
     debug = True
     bus   = None
     main(sys.argv)

@@ -24,7 +24,7 @@ def mov(args):
 def add(args):
     global R
     (x, y, z) = __get_index(args)
-    R[z] = R[x] + R[y] & 0xFFFFFFFF if z != 0 else R[z]
+    R[z] = R[x] + R[y] if z != 0 else R[z]
     Rx31 = R[x] >> 31 & 0x1
     Ry31 = R[y] >> 31 & 0x1
     Rz31 = R[z] >> 31 & 0x1

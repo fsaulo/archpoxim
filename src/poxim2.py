@@ -63,7 +63,7 @@ def mul(args):
     B = R[x] * R[y]
     R[l] = B >> 32 & 0xFFFFFFFF if l != 0 else 0x0
     R[z] = B >> 0  & 0xFFFFFFFF if z != 0 else 0x0
-    A = (R[l] << 0x08 | R[z])
+    A = (R[l] << 32 | R[z])
     R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x01 if R[l] != 0 else R[31] & ~(1<<0x00)
     ins = 'mul {},{},{},{}'.format(__r(l), __r(z), __r(x), __r(y)).ljust(25)
@@ -76,10 +76,10 @@ def sll(args):
     global R
     (x, y, z) = __get_index(args)
     l = args >> 0  & 0x1F
-    B = (R[z] << 0x08 | R[x]) << (l+1)
+    B = (R[z] << 32 | R[x]) << (l+1)
     R[z] = B >> 32 & 0xFFFFFFFF if z != 0 else 0x0
     R[x] = B >> 0  & 0xFFFFFFFF if x != 0 else 0x0
-    A = (R[z] << 0x08 | R[x])
+    A = (R[z] << 32 | R[x])
     R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x01 if R[z] != 0 else R[31] & ~(1<<0x00)
     ins = 'sll {},{},{},{}'.format(__r(z), __r(x), __r(x), l).ljust(25)
@@ -107,10 +107,10 @@ def sla(args):
     global R
     (x, y, z) = __get_index(args)
     l = args >> 0  & 0x1F
-    B = (R[z] << 0x08 | R[x]) << (l+1)
+    B = (R[z] << 32 | R[x]) << (l+1)
     R[z] = B >> 32 & 0xFFFFFFFF if z != 0 else 0x0
     R[x] = B >> 0  & 0xFFFFFFFF if x != 0 else 0x0
-    A = (R[z] << 0x08 | R[x])
+    A = (R[z] << 32 | R[x])
     R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x08 if R[z] != 0 else R[31] & ~(1<<0x03)
     ins = 'sla {},{},{},{}'.format(__r(z), __r(x), __r(x), l).ljust(25)
@@ -153,10 +153,10 @@ def srl(args):
     global R
     (x, y, z) = __get_index(args)
     l = args >> 0  & 0x1F
-    B = (R[z] << 0x08 | R[x]) >> (l+1)
+    B = (R[z] << 32 | R[x]) >> (l+1)
     R[z] = B >> 32 & 0xFFFFFFFF if z != 0 else 0x0
     R[x] = B >> 0  & 0xFFFFFFFF if x != 0 else 0x0
-    A = (R[z] << 0x08 | R[x])
+    A = (R[z] << 32 | R[x])
     R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x01 if R[z] != 0 else R[31] & ~(1<<0x00)
     ins = 'srl {},{},{},{}'.format(__r(z), __r(x), __r(x), l).ljust(25)
@@ -199,10 +199,10 @@ def sra(args):
     global R
     (x, y, z) = __get_index(args)
     l = args >> 0  & 0x1F
-    B = (R[z] << 0x08 | R[x]) >> (l+1)
+    B = (R[z] << 32 | R[x]) >> (l+1)
     R[z] = B >> 32 & 0xFFFFFFFF if z != 0 else 0x0
     R[x] = B >> 0  & 0xFFFFFFFF if x != 0 else 0x0
-    A = (R[z] << 0x08 | R[x])
+    A = (R[z] << 32 | R[x])
     R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x08 if R[z] != 0 else R[31] & ~(1<<0x03)
     ins = 'sra {},{},{},{}'.format(__r(z), __r(x), __r(x), l).ljust(25)

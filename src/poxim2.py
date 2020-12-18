@@ -124,6 +124,8 @@ def div(args):
     sw_int = False
     l = args >> 0  & 0x1F
     jmp = 0
+    msg = None
+    PC = R[29]
 
     try:
         R[l] = R[x] %  R[y] if l != 0 else 0
@@ -131,14 +133,15 @@ def div(args):
         __incaddr()
     except ZeroDivisionError:
         __save_context()
-        msg = '\n[SOFTWARE INTERRUPTION]'
-        sw_int = True
-        PC = R[29]
         if (R[31] >> 1 & 0x1) == 1:
+            msg = '\n[SOFTWARE INTERRUPTION]'
+            sw_int = True
             R[27] = R[29]
             R[26] = 0
             R[29] = 0x8
             jmp = ((R[29] - PC) // 4) - 1
+        else:
+            __incaddr()
 
     R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x20 if R[y] == 0 else R[31] & ~(1<<0x05)
@@ -170,28 +173,32 @@ def divs(args):
     l = args >> 0  & 0x1F
     sw_int = False
     jmp = 0
+    msg = None
+    PC = R[29]
 
     try:
         R[l] = R[x] %  R[y] if l != 0 else 0
         R[z] = R[x] // R[y] if z != 0 else 0
+        __incaddr()
     except ZeroDivisionError:
         __save_context()
-        msg = '\n[SOFTWARE INTERRUPTION]'
-        sw_int = True
-        PC = R[29]
         if (R[31] >> 1 & 0x1) == 1:
+            msg = '\n[SOFTWARE INTERRUPTION]'
+            sw_int = True
+            PC = R[29]
             R[27] = R[29]
             R[26] = 0
             R[29] = 0x8
             jmp = ((R[29] - PC) // 4) - 1
+        else:
+            __incaddr()
 
     R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x20 if R[y] == 0 else R[31] & ~(1<<0x05)
     R[31] = R[31] | 0x08 if R[l] != 0 else R[31] & ~(1<<0x03)
     ins = 'divs {},{},{},{}'.format(__r(l), __r(z), __r(x), __r(y)).ljust(25)
     res = 'R{}=R{}%R{}={},R{}=R{}/R{}={}'.format(l, x, y, __hex(R[l]),z, x, y,__hex(R[z]))
-    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
-    __incaddr()
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(PC), ins, res, __hex(R[31]))
     if sw_int: cmd += msg
     return cmd, jmp
 
@@ -332,29 +339,33 @@ def divi(args):
     l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
     jmp = 0
     sw_int = False
+    msg = None
+    PC = R[29]
 
     try:
         R[z] = R[x] // __twos_comp(l) if z != 0 else 0x0
+        __incaddr()
     except ZeroDivisionError:
         __save_context()
-        msg = '\n[SOFTWARE INTERRUPTION]'
-        sw_int = True
-        PC = R[29]
         if (R[31] >> 1 & 0x1) == 1:
+            msg = '\n[SOFTWARE INTERRUPTION]'
+            sw_int = True
+            PC = R[29]
             R[27] = R[29]
             R[26] = 0
             R[29] = 0x8
             jmp = ((R[29] - PC) // 4) - 1
+        else:
+            __incaddr()
 
     R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x20 if args >> 0 & 0xFFFF == 0 else R[31] & ~(1<<0x05)
     R[31] = 0
     ins = 'divi {},{},{}'.format(__r(z), __r(x), __twos_comp(l)).ljust(25)
     res = 'R{}=R{}/{}={}'.format(z, x, __hex(l), __hex(R[z]))
-    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
-    __incaddr()
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(PC), ins, res, __hex(R[31]))
     if sw_int: cmd += msg
-    return cmd, 0
+    return cmd, jmp
 
 def modi(args):
     global R
@@ -362,28 +373,32 @@ def modi(args):
     l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
     jmp = 0
     sw_int = False
+    msg = None
+    PC = R[29]
 
     try:
         R[z] = R[x] % __twos_comp(l) if z != 0 else 0x0
+        __incaddr()
     except ZeroDivisionError:
         R[z] = 0x0
         __save_context()
-        msg = '\n[SOFTWARE INTERRUPTION]'
-        sw_int = True
-        PC = R[29]
         if (R[31] >> 1 & 0x1) == 1:
+            msg = '\n[SOFTWARE INTERRUPTION]'
+            sw_int = True
+            PC = R[29]
             R[27] = R[29]
             R[26] = 0
             R[29] = 0x8
             jmp = ((R[29] - PC) // 4) - 1
+        else:
+            __incaddr()
 
     R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x20 if args >> 0 & 0xFFFF == 0 else R[31] & ~(1<<0x05)
     R[31] = 0
     ins = 'modi {},{},{}'.format(__r(z), __r(x), __twos_comp(l)).ljust(25)
     res = 'R{}=R{}%{}={}'.format(z, x, __hex(l), __hex(R[z]))
-    cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()), ins, res, __hex(R[31]))
-    __incaddr()
+    cmd = '{}:\t{}\t{},SR={}'.format(__hex(PC), ins, res, __hex(R[31]))
     if sw_int: cmd += msg
     return cmd, jmp
 
@@ -707,10 +722,9 @@ def bzd(args):
 def movs(args):
     global R
     (x, y, z) = __get_index(args)
-    if z != 0:
-        l = args >> 0 & 0x7FF
-        reg = ((args >> 20 & 0x1) * 0x7FF << 21 | x << 16 | y << 11 | l) & 0xFFFFFFFF
-        R[z] = reg
+    l = args >> 0 & 0x7FF
+    reg = ((args >> 20 & 0x1) * 0x7FF << 21 | x << 16 | y << 11 | l) & 0xFFFFFFFF
+    R[z] = reg if z != 0 else R[z]
     ins  = 'movs {},{}'.format(__r(z), __twos_comp(reg)).ljust(25)
     cmd  = '{}:\t{}\tR{}={}'.format(__hex(__pc()), ins, z, __hex(R[z]))
     __incaddr()
@@ -745,6 +759,8 @@ def __subcall(args):
     l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
     PC = R[29]
     SP = R[30]
+    ins = None
+    jmp = 0
     __overwrite(SP, 4, PC+4)
     R[30] = R[30] - 4
     if op == 0x1E:
@@ -1076,7 +1092,7 @@ def __watchdog(content):
     WDG = content >> 31 & 0x1
 
 def __countdown():
-    global WDG, CNT, ISR, R
+    global WDG, CNT, R
     if WDG == 1:                  # Watchdog enabled
         if CNT > 1: 
             CNT -= 1              # Decrement counter
@@ -1108,6 +1124,7 @@ def main(args):
     try:
         output = sys.argv[2]
         index = 0
+        arg = __hex(0)
         with open(output, 'w') as bus:
             __init(bus)    # Start bus, if file name provided
             __load(buffer) # Load program into virtual memory
@@ -1131,7 +1148,6 @@ def main(args):
                 except Exception as ex1:
                     __stdout(ex1)
                     __interrupt()
-            __interrupt()
     except IndexError as ex:
         __stdout(ex)
         __stdout('[Debug: Wrong argument]')

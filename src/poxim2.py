@@ -59,7 +59,7 @@ def sub(args):
 
 def mul(args):
     (x, y, z) = __get_index(args)
-    l = args >> 0  & 0x1F
+    l = args >> 0 & 0x1F
     B = R[x] * R[y]
     R[l] = B >> 32 & 0xFFFFFFFF if l != 0 else 0x0
     R[z] = B >> 0  & 0xFFFFFFFF if z != 0 else 0x0

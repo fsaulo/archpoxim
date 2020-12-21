@@ -7,6 +7,7 @@ CNT = 0x7FFFFFFF
 WDG = 1
 MEM = 0
 DEV = 0
+TRM = 0
 
 def mov(args):
     global R
@@ -1095,7 +1096,9 @@ def __write(line):
             pass
 
 def __terminal(content):
-    pass
+    global R, DEV, TRM
+    DEV = 0x88888888
+    TRM = content
 
 def __fpu(content):
     pass

@@ -324,6 +324,7 @@ def modi(args):
     global R
     (x, _, z) = __get_index(args)
     l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
+    reg = 0x0
     try:
         from math import remainder, copysign
         signrx = copysign(1, __twos_comp(R[x]))
@@ -374,7 +375,7 @@ def l8(args):
     (x, _, z) = __get_index(args)
     l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
     address = R[x] + l
-    R[z] = __read(address) >> 24 - (address % 4) * 8  & 0xFF if z != 0 else 0x0
+    R[z] = __read(address) >> 24 - (address % 4) * 8 & 0xFF if z != 0 else 0x0
     ins = 'l8 {},[{}+{}]'.format(__r(z), __r(x), l).ljust(25)
     res = 'R{}=MEM[{}]={}'.format(z, __hex(address), __hex(R[z], 4))
     cmd = '{}:\t{}\t{}'.format(__hex(__pc()), ins, res)
@@ -676,6 +677,7 @@ def bzd(args):
 def movs(args):
     global R
     (x, y, z) = __get_index(args)
+    reg = 0x0
     if z != 0:
         l = args >> 0 & 0x7FF
         reg = ((args >> 20 & 0x1) * 0x7FF << 21 | x << 16 | y << 11 | l) & 0xFFFFFFFF
@@ -696,11 +698,14 @@ def intx(args):
         __interrupt()
 
 def __subcall(args):
+    global R
     x = args >> 16 & 0x1F
     op = args >> 26 & 0x3F
     l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
     PC = R[29]
     SP = R[30]
+    ins = None
+    jmp = 0
     __overwrite(SP, 4, PC+4)
     R[30] = R[30] - 4
     if op == 0x1E:
@@ -887,12 +892,12 @@ def __overwrite(address, size, content):
 
 def __read(address=None):
     global MEM
+    __stdout('[Debug: Read from memory @ {}]'.format(__hex(address)))
     if address is not None:
         index = address // 4
         return int(MEM[index], 16)
     else:
         return MEM
-    __stdout('[Debug: Read from memory @ {}]'.format(__hex(address)))
 
 def __load(prog):
     global MEM

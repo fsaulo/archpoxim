@@ -1099,9 +1099,9 @@ def __write(line):
             pass
 
 def __terminal(content):
-    global R, DEV, TRM
-    DEV = 0x88888888
-    TRM = content
+    global R, DEV, TRM_OUT
+    if DEV == 0x8888888B:
+        TRM_OUT.append(content)
 
 def __fpu(content):
     pass

@@ -7,7 +7,7 @@ CNT = 0x7FFFFFFF
 WDG = 1
 MEM = 0
 DEV = 0
-TRM = 0
+TRM_OUT = []
 
 def mov(args):
     global R
@@ -930,9 +930,9 @@ def __subarg(args):
     except KeyError:
         __badinstr(args)
 
-def __stdout(output):
+def __stdout(output, end='\n'):
     if debug:
-        print(output)
+        print(output, end=end)
 
 def __nop():
     return None # Nothing to do here...
@@ -987,6 +987,7 @@ def __interrupt(pr=0):
     if pr == 0:
         msg = '[END OF SIMULATION]'
         try:
+            __termout()
             __write(msg)
             sys.exit()
         except Exception:
@@ -1012,7 +1013,7 @@ def __badinstr(args):
     return cmd, ((R[29] - PC) // 4) - 1
 
 def __overwrite(address, size, content):
-    global MEM
+    global MEM, DEV
     index = address // 4
     try:
         buffer = int(MEM[index], 16)
@@ -1032,6 +1033,7 @@ def __overwrite(address, size, content):
         for i in range(0x88888888, 0x8888888C): devices[hex(i)] = __terminal
         for i in range(0x80808880, 0x8080888D): devices[hex(i)] = __fpu
         try:
+            DEV = address # Store pointer to point at the device being accessed
             devices[hex(address)](content)
         except IndexError as ex:
             __stdout(ex)
@@ -1063,10 +1065,9 @@ def __init(line):
     bus = line
 
 def __termout():
-    if TRM:
+    if TRM_OUT:
         __write('[TERMINAL]')
-        for char in TRM:
-            __write(chr(char), end='')
+        __write(''.join([chr(i) for i in TRM_OUT]))
 
 def __goto_intr(code):
     global R
@@ -1086,13 +1087,13 @@ def __goto(arg, irs=0):
     else:
         return arg + 1
 
-def __write(line):
+def __write(line, end='\n'):
     global bus
     if line is not None:
         try:
-            __stdout(line)
+            __stdout(line, end=end)
             bus.write(line)
-            bus.write('\n')
+            bus.write(end)
         except FileNotFoundError:
             __stdout('[Errno ?] Not possible to access bus')
         except TypeError:

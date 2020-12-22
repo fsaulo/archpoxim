@@ -1062,6 +1062,12 @@ def __init(line):
     global bus
     bus = line
 
+def __termout():
+    if TRM:
+        __write('[TERMINAL]')
+        for char in TRM:
+            __write(chr(char), end='')
+
 def __goto_intr(code):
     global R
     # Jump to interruption address.

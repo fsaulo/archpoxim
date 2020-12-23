@@ -8,6 +8,7 @@ WDG = 1
 MEM = 0
 DEV = 0
 TRM_OUT = []
+TRM_IN  = []
 
 def mov(args):
     global R
@@ -1103,6 +1104,8 @@ def __terminal(content):
     global R, DEV, TRM_OUT
     if DEV == 0x8888888B:
         TRM_OUT.append(content)
+    elif DEV == 0x8888888A:     # This is something to investigate further
+        TRM_IN.append(content)
 
 def __fpu(content):
     pass

@@ -13,12 +13,12 @@ TRM_IN  = []
 def mov(args):
     global R
     if args != 0:
-        z    = args >> 21 & 0x1F
-        R[z] = args >>  0 & 0x1FFFFF if z != 0 else 0x0
-        ins  = 'mov {},{}'.format(__r(z), R[z]).ljust(25)
-        cmd  = '{}:\t{}\t{}={}'.format(__hex(__pc()), ins, __r(z).upper(), __hex(R[z]))
-        __incaddr()
-        return cmd, 0
+    z    = args >> 21 & 0x1F
+    R[z] = args >>  0 & 0x1FFFFF if z != 0 else 0x0
+    ins  = 'mov {},{}'.format(__r(z), R[z]).ljust(25)
+    cmd  = '{}:\t{}\t{}={}'.format(__hex(__pc()), ins, __r(z).upper(), __hex(R[z]))
+    __incaddr()
+    return cmd, 0
     else:
         return __nop(), 0
 

@@ -19,7 +19,6 @@ def mov(args):
     __incaddr()
     return cmd, 0
 
-
 def add(args):
     global R
     (x, y, z) = __get_index(args)

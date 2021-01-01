@@ -1027,7 +1027,7 @@ def __overwrite(address, size, content):
     if index <= 0x7FFC:
         MEM[index] = __hex(buffer & ~byte[size] | content & byte[size])
     else:
-        devices = { '0x80808080' : __watchdog }
+        devices = { '0x80808080' : __watchdog, '0x20202020' : __watchdog }
         for i in range(0x88888888 >> 2, 0x8888888C >> 2): devices[hex(i)] = __terminal
         for i in range(0x80808880 >> 2, 0x8080888D >> 2): devices[hex(i)] = __fpu
         for i in range(0x88888888, 0x8888888C): devices[hex(i)] = __terminal

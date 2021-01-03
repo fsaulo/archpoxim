@@ -910,9 +910,10 @@ def __save_context():
 def __hex(string, length=10):
     return '{0:#0{1}X}'.format(string, length).replace('X','x')
 
-def debug_mode(value=False):
+def debug_mode(args):
     global debug
-    debug = value
+    if '--debug' in args:
+        debug = True
 
 def __subarg(args):
     subfunc = {
@@ -1048,18 +1049,18 @@ def __read(address=None):
     else:
         return MEM
 
-def __load(prog):
+def __load_program(prog):
     global MEM
     MEM = prog
+    word_count = 0
     for byte in range(0x7FFC - len(prog)):
         MEM.append(__hex(0))
-    __stdout('[Debug: Loaded {} bytes into memory]'.format(len(prog)*4))
-
-def __stack():
-    global MEM
-    for line in MEM[::]:
-        if line != __hex(0):
-            __stdout(line)
+    __stdout('[Debug: Program loaded...]')
+    for word in MEM:
+        if word != '0x00000000': 
+            word_count += 1
+            __stdout(word)
+    __stdout('[Debug: Loaded {} bytes into memory]'.format(word_count*4))
 
 def __init(line):
     global bus
@@ -1135,11 +1136,8 @@ def __countdown():
     return 0
 
 def main(args):
-    for arg in args:
-        if arg == '--debug':
-            debug_mode(True)
-
     try:
+        debug_mode(args)
         file = sys.argv[1]
         with open(file, 'r') as bus:
             buffer = bus.read().splitlines()
@@ -1149,34 +1147,35 @@ def main(args):
 
     try:
         output = sys.argv[2]
-        index = 0
-        arg = __hex(0)
-        with open(output, 'w') as bus:
-            __init(bus)    # Start bus, if file name provided
-            __load(buffer) # Load program into virtual memory
-            __begin()      # Write starting sentence
-            while True:
-                inst = buffer[index]            # Access buffer at referenced address
-                call = parse_arg(inst)          # Parse instruction word
-                try:
-                    irs  = __countdown()        # Update watchdog countdown & get interruption status
-                    word = 0xFFFFFFFF           # Define 32-bit extractor
-                    arg  = int(inst, 16) & word # Extract 32-bit buffer
-                    __loadreg(arg)              # Load current instruction to IR
-                    cmd, jmp = call(arg)        # Call function with args
-                    if irs != 0:
-                        index += __goto_intr(irs)
-                    else:
-                        index += __goto(jmp)    # Goes to new address in memory
-                        __write(cmd)            # Write result to the bus
-                except TypeError:
-                    __badinstr(arg)
-                except Exception as ex1:
-                    __stdout(ex1)
-                    __interrupt()
-    except IndexError as ex:
-        __stdout(ex)
-        __stdout('[Debug: Wrong argument]')
+    except IndexError:
+        output = '/dev/null'
+        __stdout('[Debug: Output file not provided, redirecting to /dev/null instead]')
+                
+    index = 0
+    arg = __hex(0)
+    with open(output, 'w') as bus:
+        __init(bus)            # Start bus, if file name provided
+        __load_program(buffer) # Load program into virtual memory
+        __begin()              # Write starting sentence
+        while True:
+            inst = buffer[index]   # Access buffer at referenced address
+            call = parse_arg(inst) # Parse instruction word
+            try:
+                irs  = __countdown()        # Update watchdog countdown & get interruption status
+                word = 0xFFFFFFFF           # Define 32-bit extractor
+                arg  = int(inst, 16) & word # Extract 32-bit buffer
+                __loadreg(arg)              # Load current instruction to IR
+                cmd, jmp = call(arg)        # Call function with args
+                if irs != 0:
+                    index += __goto_intr(irs)
+                else:
+                    index += __goto(jmp)    # Goes to new address in memory
+                    __write(cmd)            # Write result to the bus
+            except TypeError:
+                __badinstr(arg)
+            except Exception as ex1:
+                __stdout(ex1)
+                __interrupt()
 
 def parse_arg(content):
     struct = {

@@ -1035,10 +1035,10 @@ def __overwrite(address, size, content):
         devices = { '0x80808080' : __watchdog, '0x20202020' : __watchdog }
         for i in range(0x88888888 >> 2, 0x8888888C >> 2): devices[hex(i)] = __terminal
         for i in range(0x80808880 >> 2, 0x8080888D >> 2): devices[hex(i)] = __fpu
-        for i in range(0x88888888, 0x8888888C): devices[hex(i)] = __terminal
-        for i in range(0x80808880, 0x8080888D): devices[hex(i)] = __fpu
+        for i in range(0x88888888, 0x8888888D): devices[hex(i)] = __terminal
+        for i in range(0x80808880, 0x80808890): devices[hex(i)] = __fpu
         try:
-            DEV = address # Store pointer to point at the device being accessed
+            DEV = address # Store pointer that points at the device being accessed
             devices[hex(address)](content)
         except IndexError as ex:
             __stdout(ex)

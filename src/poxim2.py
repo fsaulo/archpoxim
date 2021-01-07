@@ -2,13 +2,17 @@ import sys
 
 # Define general purpose registers
 # CR -> R[26], IPC -> R[27], IR -> R[28], PC -> R[29], SP -> R[30], SR -> R[31]
-R   = [uint32 * 0 for uint32 in range(32)]
-CNT = 0x7FFFFFFF
-WDG = 1
-MEM = 0
-DEV = 0
-TRM_OUT = []
-TRM_IN  = []
+R = [uint32 * 0 for uint32 in range(32)] # General purpose registers
+X = 0   # FPU X register
+Y = 0   # FPU Y register
+Z = 0   # FPU Z register
+CTR = 0 # FPU control multiplexer device
+WDG = 1 # Watchdog flag
+MEM = 0 # Memory device
+DEV = 0 # Device index register
+CNT = 0x7FFFFFFF # Default value for the wawtchdog counter
+TRM_OUT = []     # Terminal output buffer
+TRM_IN  = []     # Terminai input buffer
 
 def mov(args):
     global R

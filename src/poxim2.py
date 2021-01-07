@@ -1121,6 +1121,51 @@ def __watchdog(content):
     CNT = content & 0x7FFFFFFF
     WDG = content >> 31 & 0x1
 
+def __float_bin(num, places = 3):  
+    full, dec = str(num).split(".") 
+    full = int(full) 
+    res = (str(bin(full))+".").replace('0b','') 
+  
+    for x in range(places): 
+        dec = str('0.')+str(dec) 
+        temp = '%1.20f' %(float(dec)*2) 
+        full, dec = temp.split(".") 
+        res += full 
+    return res 
+
+def __iee754(n):
+    n /= 1.0
+    sign = 0
+    if n < 0 :  
+        sign = 1
+        n = n * (-1)  
+    p = 30
+    dec = __float_bin(n, places=p) 
+    dot_place = dec.find('.') 
+    one_place = dec.find('1')
+    
+    if one_place > dot_place:
+        dec = dec.replace(".","") 
+        one_place -= 1
+        dot_place -= 1
+    elif one_place < dot_place: 
+        dec = dec.replace(".","") 
+        dot_place -= 1
+    
+    mantissa = dec[one_place+1:] 
+    exponent = dot_place - one_place 
+    exponent_bits = exponent + 127
+    exponent_bits = bin(exponent_bits).replace("0b",'')  
+    mantissa = mantissa[0:23] 
+  
+    # the IEEE754 notation in binary      
+    binary = str(sign) + exponent_bits.zfill(8) + mantissa 
+  
+    # convert the binary to hexadecimal
+    integr = int('0x%0*X' %((len(binary) + 3) // 4, int(binary, 2)), 16)
+    hexdec = __hex(integr)
+    return (hexdec, integr)
+
 def __countdown():
     global WDG, CNT, R
     if WDG == 1:                  # Watchdog enabled

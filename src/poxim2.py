@@ -1110,7 +1110,7 @@ def __terminal(content):
         TRM_OUT.append(content)
     elif DEV == 0x8888888A:     # This is something to investigate further
         TRM_IN.append(content)
-
+        
 def __fpu(content):
     pass
 
@@ -1161,10 +1161,8 @@ def __iee754(n):
     # the IEEE754 notation in binary      
     binary = str(sign) + exponent_bits.zfill(8) + mantissa 
   
-    # convert the binary to hexadecimal
-    integr = int('0x%0*X' %((len(binary) + 3) // 4, int(binary, 2)), 16)
-    hexdec = __hex(integr)
-    return (hexdec, integr)
+def __iee754(value):
+    return struct.unpack('I', struct.pack('f', value))[0]
 
 def __countdown():
     global WDG, CNT, R

@@ -1207,18 +1207,24 @@ def main(args):
             inst = buffer[index]   # Access buffer at referenced address
             call = parse_arg(inst) # Parse instruction word
             try:
+                inst = buffer[index]        # Access buffer at referenced address
+                call = parse_arg(inst)      # Parse instruction word
                 irs  = __countdown()        # Update watchdog countdown & get interruption status
                 word = 0xFFFFFFFF           # Define 32-bit extractor
                 arg  = int(inst, 16) & word # Extract 32-bit buffer
                 __loadreg(arg)              # Load current instruction to IR
                 cmd, jmp = call(arg)        # Call function with args
                 if irs != 0:
-                    index += __goto_intr(irs)
+                    index += goto_intr(irs)
                 else:
-                    index += __goto(jmp)    # Goes to new address in memory
+                    index += goto(jmp)      # Goes to new address in memory
                     __write(cmd)            # Write result to the bus
             except TypeError:
                 __badinstr(arg)
+            except IndexError as ex2:
+                __stdout(ex2)
+                __stdout('[Error ?: Probably tried to access buffer at invalid location')
+                __interrupt()
             except Exception as ex1:
                 __stdout(ex1)
                 __interrupt()

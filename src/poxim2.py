@@ -15,6 +15,7 @@ CNT = 0x7FFFFFFF # Default value for the wawtchdog counter
 FPU_INT = 0      # Initialize fpu interruption cycle counter 
 TRM_OUT = []     # Terminal output buffer
 TRM_IN  = []     # Terminai input buffer
+INT_QUEUE = []   # Interruption queue
 
 def mov(args):
     global R
@@ -1168,7 +1169,6 @@ def __fpu(content):
                 exp_x = X >> 23 & 0xFF
                 exp_y = Y >> 23 & 0xFF
                 FPU_INT = (exp_x - exp_y) + 1
-                print(FPU_INT)
                 HDT = 2 if error_code == 1 else 3
                 CTR |= (1<<0x5) if error_code == 1 else CTR
         except IndexError:
@@ -1215,16 +1215,27 @@ def __round(z):
 def __ieee754(value):
     return struct.unpack('I', struct.pack('f', value))[0]
 
+def __int_query():
+    global INT_QUEUE
+    if INT_QUEUE:
+        inter = INT_QUEUE.pop(0)
+        print(inter)
+        return __interrupt(inter)
+    else:
+        return 0
+
 def __fpu_query():
     global FPU_INT, CTR
     if CTR != 0:
         if FPU_INT > 0:
-            print("AQUI")
             FPU_INT -= 1        
         elif FPU_INT == 0:
-            CTR &= ~(0x1F)
-            __interrupt(HDT)        
-    
+            if HDT != 2:
+                CTR &= ~(0x3F)
+            else:
+                CTR &= ~(0x1F)
+            __add2queue(HDT)        
+
 def __countdown():
     global WDG, CNT, R
     if WDG == 1:                  # Watchdog enabled
@@ -1233,14 +1244,16 @@ def __countdown():
         else: 
             CNT = 0x7FFFFFFF      # Reset counter
             WDG = 0               # Disable watchdog
-        return 0
     else:
         R[26] = 0xE1AC04DA
         if R[31] >> 1 & 0x1 == 1: # If interruption enabled
             WDG = 1               # Disable watchdog
             R[27] = R[29]         # Store interruption address
-            return __interrupt(1) # Return interruption status
-    return 0
+            __add2queue(1)        # Add interruption to queue
+
+def __add2queue(code):
+    global INT_QUEUE
+    INT_QUEUE.append(code)
 
 def hex2float(value):
     if isinstance(value, str):
@@ -1270,11 +1283,11 @@ def main(args):
         __load_program(buffer) # Load program into virtual memory
         __begin()              # Write starting sentence
         while True:
-            
             try:
                 inst = buffer[index]        # Access buffer at referenced address
                 call = parse_arg(inst)      # Parse instruction word
-                irs  = __countdown()        # Update watchdog countdown & get interruption status
+                __countdown()               # Update watchdog countdown & get interruption status
+                irs  = __int_query()
                 word = 0xFFFFFFFF           # Define 32-bit extractor
                 arg  = int(inst, 16) & word # Extract 32-bit buffer
                 __loadreg(arg)              # Load current instruction to IR

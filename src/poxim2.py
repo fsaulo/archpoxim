@@ -1,4 +1,4 @@
-import sys
+import sys, struct, math
 
 # Define general purpose registers
 # CR -> R[26], IPC -> R[27], IR -> R[28], PC -> R[29], SP -> R[30], SR -> R[31]
@@ -938,7 +938,7 @@ def __stdout(output, end='\n'):
         print(output, end=end)
 
 def __nop():
-    return None # Nothing to do here...
+    pass # Nothing to do here...
 
 def __pc():
     return R[29]
@@ -1074,7 +1074,7 @@ def __termout():
         __write('[TERMINAL]')
         __write(''.join([chr(i) for i in TRM_OUT]))
 
-def __goto_intr(code):
+def goto_intr(code):
     global R
     # Jump to interruption address.
     # HW1 : code == 1 -> address => 0x00000010
@@ -1086,7 +1086,7 @@ def __goto_intr(code):
     R[29] = address              # Update program counter with new address
     return jmp
 
-def __goto(arg, irs=0):
+def goto(arg, irs=0):
     if arg == 0 or arg is None:
         return 1
     else:
@@ -1111,9 +1111,6 @@ def __terminal(content):
     elif DEV == 0x8888888A:     # This is something to investigate further
         TRM_IN.append(content)
         
-def __fpu(content):
-    pass
-
 def __watchdog(content):
     global WDG, DEV, CNT
     R[26] = 0xE1AC04DA
@@ -1121,46 +1118,76 @@ def __watchdog(content):
     CNT = content & 0x7FFFFFFF
     WDG = content >> 31 & 0x1
 
-def __float_bin(num, places = 3):  
-    full, dec = str(num).split(".") 
-    full = int(full) 
-    res = (str(bin(full))+".").replace('0b','') 
-  
-    for x in range(places): 
-        dec = str('0.')+str(dec) 
-        temp = '%1.20f' %(float(dec)*2) 
-        full, dec = temp.split(".") 
-        res += full 
-    return res 
+def __fpu(content):
+    global R, X, Y, Z, CTR, DEV
+    
+    __stdout('[Debug: FPU processing...]')
+    address = DEV
+    operation = {
+        0 : __nop,
+        1 : __sum,
+        2 : __sub,
+        3 : __mul,
+        4 : __div,
+        5 : '__atx',
+        6 : '__aty',
+        7 : __ceil,
+        8 : __floor,
+        9 : __round 
+    }
+    
+    if address in range(0x80808880, 0x80808884):
+        X = content
+        __stdout('[Debug: Content of X = [{}]'.format(__hex(X)))
+    elif address in range(0x80808884, 0x80808888):
+        Y = content
+        __stdout('[Debug: Content of Y = [{}]'.format(__hex(Y)))
+    elif address in range(0x80808888, 0x8080888C):
+        Z = content
+        __stdout('[Debug: Content of Z = [{}]'.format(__hex(Z)))
+    elif address in range(0x8080888C, 0x80808890):
+        CTR = content
+    
+    opcode = CTR >> 0x0 & 0x1F
 
-def __iee754(n):
-    n /= 1.0
-    sign = 0
-    if n < 0 :  
-        sign = 1
-        n = n * (-1)  
-    p = 30
-    dec = __float_bin(n, places=p) 
-    dot_place = dec.find('.') 
-    one_place = dec.find('1')
+    if opcode == 0:
+        operation[0]()
+    elif opcode == 5:
+        X = Z
+    elif opcode == 6:
+        Y = Z
+    elif opcode in [7, 8, 9]:
+        Z = operation[opcode](Z)
+    else:
+        Z = operation[opcode](X, Y)
     
-    if one_place > dot_place:
-        dec = dec.replace(".","") 
-        one_place -= 1
-        dot_place -= 1
-    elif one_place < dot_place: 
-        dec = dec.replace(".","") 
-        dot_place -= 1
+    __stdout('[Debug: Content of Z = [{}]'.format(__hex(Z)))
+        
+def __sum(x, y):
+    return __iee754(x + y)
+
+def __sub(x, y):
+    return __iee754(x - y)
+
+def __mul(x, y):
+    return __iee754(x * y)
+
+def __div(x, y):
+    if y != 0:
+        return __iee754(x / y)
+
+def __ceil(z):
+    res = math.ceil(z)
+    return __iee754(res)
+
+def __floor(z):
+    res = math.floor(z)
+    return __iee754(res)
+
+def __round(z):
+    res = round(z)
+    return __iee754(res)    
     
-    mantissa = dec[one_place+1:] 
-    exponent = dot_place - one_place 
-    exponent_bits = exponent + 127
-    exponent_bits = bin(exponent_bits).replace("0b",'')  
-    mantissa = mantissa[0:23] 
-  
-    # the IEEE754 notation in binary      
-    binary = str(sign) + exponent_bits.zfill(8) + mantissa 
-  
 def __iee754(value):
     return struct.unpack('I', struct.pack('f', value))[0]
 
@@ -1196,7 +1223,7 @@ def main(args):
     except IndexError:
         output = '/dev/null'
         __stdout('[Debug: Output file not provided, redirecting to /dev/null instead]')
-                
+
     index = 0
     arg = __hex(0)
     with open(output, 'w') as bus:
@@ -1204,8 +1231,6 @@ def main(args):
         __load_program(buffer) # Load program into virtual memory
         __begin()              # Write starting sentence
         while True:
-            inst = buffer[index]   # Access buffer at referenced address
-            call = parse_arg(inst) # Parse instruction word
             try:
                 inst = buffer[index]        # Access buffer at referenced address
                 call = parse_arg(inst)      # Parse instruction word

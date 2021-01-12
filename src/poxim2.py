@@ -3,18 +3,20 @@ import sys, struct, math
 # Define general purpose registers
 # CR -> R[26], IPC -> R[27], IR -> R[28], PC -> R[29], SP -> R[30], SR -> R[31]
 R = [uint32 * 0 for uint32 in range(32)] # General purpose registers
-X = 0   # FPU X register
-Y = 0   # FPU Y register
-Z = 0   # FPU Z register
+X = {}  # FPU X register
+Y = {}  # FPU Y register
+Z = {}  # FPU Z register
 CTR = 0 # FPU control multiplexer device
 WDG = 1 # Watchdog flag
 MEM = 0 # Memory device
 DEV = 0 # Device index register
 HDT = 3 # Type of hardware interruption. Default HW constant time (code 3)
 CNT = 0x7FFFFFFF # Default value for the wawtchdog counter
+FPU_OP  = 0      # FPU operation flag
 FPU_INT = 0      # Initialize fpu interruption cycle counter 
 TRM_OUT = []     # Terminal output buffer
 TRM_IN  = []     # Terminai input buffer
+INT_ADR = 0      # Keeps track of generated interruption instruction
 INT_QUEUE = []   # Interruption queue
 
 def mov(args):
@@ -482,7 +484,7 @@ def s8(args):
     address = R[x] + l
     __overwrite(address, 1, R[z])
     ins = 's8 [{}+{}],{}'.format(__r(x), l, __r(z)).ljust(25)
-    res = 'MEM[{}]=R{}={}'.format(__hex(address), z, __hex(R[z], 4))
+    res = 'MEM[{}]=R{}={}'.format(__hex(address), z, __hex(R[z] & 0xFF, 4))
     cmd = '{}:\t{}\t{}'.format(__hex(__pc()), ins, res)
     __incaddr()
     return cmd, 0
@@ -580,11 +582,11 @@ def beq(args):
     PC = R[29]
     ZN = R[31] >> 6 & 0x1
     if ZN == 1:
-        jmp = reg
+        jmp = __twos_comp(reg)
         R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
     else:
         __incaddr()
-    ins = 'beq {}'.format(reg).ljust(25)
+    ins = 'beq {}'.format(__twos_comp(reg)).ljust(25)
     cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
     return cmd, jmp
 
@@ -904,10 +906,10 @@ def __clear_bit(args):
     cmd = cbr(args) if l == 0 else sbr(args)
     return cmd, 0
 
-def __save_context():
+def __save_context(jmp=0):
     global R
     for index in (29, 26, 27):
-        content = R[index] if index != 29 else R[29] + 4
+        content = R[index] if index != 29 else R[29] + 4 + jmp
         __overwrite(R[30], 4, content)
         R[30] -= 4
 
@@ -1037,7 +1039,7 @@ def __overwrite(address, size, content):
     else:
         devices = { '0x80808080' : __watchdog, '0x20202020' : __watchdog }
         for i in range(0x88888888 >> 2, 0x8888888C >> 2): devices[hex(i)] = __terminal
-        for i in range(0x80808880 >> 2, 0x8080888D >> 2): devices[hex(i)] = __fpu
+        for i in range(0x80808880 >> 2, 0x80808890 >> 2): devices[hex(i)] = __fpu
         for i in range(0x88888888, 0x8888888D): devices[hex(i)] = __terminal
         for i in range(0x80808880, 0x80808890): devices[hex(i)] = __fpu
         try:
@@ -1048,10 +1050,19 @@ def __overwrite(address, size, content):
 
 def __read(address=None):
     global MEM
-    __stdout('[Debug: Read from memory @ {}]'.format(__hex(address)))
     if address is not None:
+        __stdout('[Debug: Read from memory @ {}]'.format(__hex(address)))
         index = address // 4
-        return int(MEM[index], 16)
+        if index <= 0x7FFC:
+            return int(MEM[index], 16)
+        else:
+            reg = { 
+                '0x80808880' : X['value'],
+                '0x80808884' : Y['value'],
+                '0x80808888' : Z['value'],
+                '0x8080888f' : CTR
+            }
+            return reg[hex(address)]
     else:
         return MEM
 
@@ -1124,7 +1135,7 @@ def __watchdog(content):
     WDG = content >> 31 & 0x1
 
 def __fpu(content):
-    global R, X, Y, Z, CTR, DEV, FPU_INT, HDT
+    global R, X, Y, Z, CTR, DEV, FPU_INT, FPU_OP, HDT
     
     __stdout('[Debug: FPU processing...]')
     address = DEV
@@ -1142,101 +1153,106 @@ def __fpu(content):
     }
     
     if address in range(0x80808880, 0x80808884):
-        X = __ieee754(float(content))
-        __stdout('[Debug: Content of X = [{}]'.format(__hex(X)))
+        X = { 'value' : content, 'type' : int }
+        __stdout('[Debug: Content of X = [{}]'.format(__hex(X['value'])))
     elif address in range(0x80808884, 0x80808888):  
-        Y = __ieee754(float(content))
-        __stdout('[Debug: Content of Y = [{}]'.format(__hex(Y)))
+        Y = { 'value' : content, 'type' : int }
+        __stdout('[Debug: Content of Y = [{}]'.format(__hex(Y['value'])))
     elif address in range(0x80808888, 0x8080888C):
-        Z = __ieee754(float(content))
-        __stdout('[Debug: Content of Z = [{}]'.format(__hex(Z)))
+        Z = { 'value' : content, 'type' : int }
+        __stdout('[Debug: Content of Z = [{}]'.format(__hex(Z['value'])))
     elif address in range(0x8080888C, 0x80808890):
-        CTR = content
-        opcode = CTR >> 0x0 & 0x1F
-        try:
-            if opcode == 0:
-                operation[0]()
-                HDT = 4
-            elif opcode == 5:
-                X = Z
-                HDT = 4
-            elif opcode == 6:
-                Y = Z
-                HDT = 4
-            elif opcode in [7, 8, 9]:
-                Z = operation[opcode](Z)
-                HDT = 4
-            else:
-                Z, error_code = operation[opcode](X, Y)
-                exp_x = X >> 23 & 0xFF
-                exp_y = Y >> 23 & 0xFF
-                FPU_INT = (exp_x - exp_y) + 1
-                HDT = 2 if error_code == 1 else 3
-                CTR |= (1<<0x5) if error_code == 1 else CTR
-        except IndexError:
-            CTR |= (1<<5)
+        CTR = content & 0x1F
+        FPU_OP = CTR >> 0x0 & 0x1F
+        FPU_INT = 1
+        if FPU_OP == 0:
+            operation[0]()
+        elif FPU_OP == 5:
+            X = Z.copy()
+            HDT = 4
+        elif FPU_OP == 6:
+            Y = Z.copy()
+            HDT = 4
+        elif FPU_OP in [7, 8, 9]:
+            z = Z['value'] if Z['type'] is float else __ieee754(float(Z['value']))
+            Z = operation[FPU_OP](z)
+            HDT = 4
+        elif FPU_OP in range(10):
+            x = X['value'] if X['type'] is float else __ieee754(float(X['value']))
+            y = Y['value'] if Y['type'] is float else __ieee754(float(Y['value']))
+            Z, error_code = operation[FPU_OP](hex2float(x), hex2float(y))
+            exp_x = x >> 23 & 0xFF
+            exp_y = y >> 23 & 0xFF
+            FPU_INT = abs(exp_x - exp_y) + 1
+            HDT = 2 if error_code == 1 else 3
+            CTR = 0x20 if error_code == 1 else CTR
+        else:
+            CTR = 0x20
             HDT = 2
-            __stdout('[Debug: FPU invalid operation]')
-        __stdout('[Debug: Content of Z = [{}]'.format(__hex(Z)))
-
-def __sum(x, y):
-    x = hex2float(x)
-    y = hex2float(y)
-    return (__ieee754(x + y), 0)
-
-def __sub(x, y):
-    x = hex2float(x)
-    y = hex2float(y)
-    return (__ieee754(x - y), 0)
-
-def __mul(x, y):
-    x = hex2float(x)
-    y = hex2float(y)
-    return (__ieee754(x * y), 0)
-
-def __div(x, y):
-    x = hex2float(x)
-    y = hex2float(y)
-    if y != 0:
-        return __ieee754(x / y), 0
-    else:
-        return 0, 1
-
-def __ceil(z):
-    res = math.ceil(hex2float(z))
-    return __ieee754(res)
-
-def __floor(z):
-    res = math.floor(hex2float(z))
-    return __ieee754(res)
-
-def __round(z):
-    res = round(hex2float(z))
-    return __ieee754(res)    
-
-def __ieee754(value):
-    return struct.unpack('I', struct.pack('f', value))[0]
+            FPU_INT = 1
+            __stdout('[Debug: FPU invalid operation code [{}]]'.format(hex(FPU_OP)))
+        __stdout('[Debug: Content of Z = [{}]]'.format(__hex(Z['value'])))
 
 def __int_query():
     global INT_QUEUE
     if INT_QUEUE:
         inter = INT_QUEUE.pop(0)
-        print(inter)
         return __interrupt(inter)
     else:
         return 0
 
 def __fpu_query():
-    global FPU_INT, CTR
-    if CTR != 0:
+    global R, FPU_INT, FPU_OP, CTR
+    if FPU_OP != 0:
         if FPU_INT > 0:
-            FPU_INT -= 1        
-        elif FPU_INT == 0:
-            if HDT != 2:
-                CTR &= ~(0x3F)
-            else:
-                CTR &= ~(0x1F)
-            __add2queue(HDT)        
+            FPU_INT -= 1
+            __stdout('[Debug: FPU duty cycle :: {}]'.format(FPU_INT))        
+        else:
+            __save_context(jmp=-4)
+            R[26] = 0x01EEE754
+            R[27] = INT_ADR
+            FPU_OP = 0
+            CTR &= ~(0x1F)
+            __add2queue(HDT)
+
+def __sum(x, y):
+    res = {'value': __ieee754(x + y), 'type' : float}
+    return (res, 0)
+
+def __sub(x, y):
+    res = {'value': __ieee754(x - y), 'type': float}
+    return (res, 0)
+
+def __mul(x, y):
+    res = {'value': __ieee754(x * y), 'type': float}
+    return (res, 0)
+
+def __div(x, y):
+    res = Z
+    if y != 0:
+        res['value'] = __ieee754(x / y)
+        return (res, 0)
+    else:
+        return (res, 1)
+
+def __ceil(z):
+    res = math.ceil(hex2float(z))
+    return {'value' : res, 'type' : int}
+
+def __floor(z):
+    res = math.floor(hex2float(z))
+    return {'value' : res, 'type' : int}
+
+def __round(z):
+    res = round(hex2float(z))
+    return {'value': res, 'type': int}
+
+def __ieee754(value):
+    return struct.unpack('I', struct.pack('f', value))[0]
+
+def __store_address():
+    global INT_ADR
+    INT_ADR = R[29]
 
 def __countdown():
     global WDG, CNT, R
@@ -1258,8 +1274,7 @@ def __add2queue(code):
     INT_QUEUE.append(code)
 
 def hex2float(value):
-    if isinstance(value, str):
-        value = int(value, 16)
+    value = int(value, 16) if isinstance(value, str) else value
     return struct.unpack(">f", struct.pack(">i", value))[0]
 
 def main(args):
@@ -1288,18 +1303,19 @@ def main(args):
             try:
                 inst = buffer[index]        # Access buffer at referenced address
                 call = parse_arg(inst)      # Parse instruction word
-                __countdown()               # Update watchdog countdown & get interruption status
-                irs  = __int_query()
+                __fpu_query()               # FPU cycle interruption verification
+                __countdown()               # Update watchdog countdown
+                irs  = __int_query()        # Iterruption manager
                 word = 0xFFFFFFFF           # Define 32-bit extractor
                 arg  = int(inst, 16) & word # Extract 32-bit buffer
                 __loadreg(arg)              # Load current instruction to IR
                 if irs != 0:
                     index += goto_intr(irs)
                 else:
+                    __store_address()
                     cmd, jmp = call(arg)    # Call function with args
                     index += goto(jmp)      # Goes to new address in memory
                     __write(cmd)            # Write result to the bus
-                __fpu_query()               # FPU cycle interruption verification
             except TypeError:
                 __badinstr(arg)
             except IndexError as ex2:
@@ -1371,5 +1387,4 @@ def parse_arg(content):
 if __name__ == '__main__':
     debug = True
     bus   = None
-    
     main(sys.argv)

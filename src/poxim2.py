@@ -1084,9 +1084,11 @@ def goto_intr(code):
     # HW2 : code == 2 -> address => 0x00000014    
     # HW3 : code == 3 -> address => 0x00000018
     # HW4 : code == 4 -> address => 0x0000001C
-    address = (3 + code) * 4     # Begin at 0x6 + '4*code'
-    jmp = (address - R[29]) // 4 # Branch 'jmp' adresses
-    R[29] = address              # Update program counter with new address
+    address = 0xC + 4*code    # Begins at 0x10 (code >= 1)
+    PC  = R[29]               # Save current address
+    jmp = (address - PC) // 4 # Branch 'jmp' adresses
+    R[29] = address           # Update program counter with new address
+    __stdout('[Debug: Branching @ {} -> {}]'.format(__hex(PC), __hex(R[29])))
     return jmp
 
 def goto(arg, irs=0):

@@ -1291,10 +1291,10 @@ def main(args):
                 word = 0xFFFFFFFF           # Define 32-bit extractor
                 arg  = int(inst, 16) & word # Extract 32-bit buffer
                 __loadreg(arg)              # Load current instruction to IR
-                cmd, jmp = call(arg)        # Call function with args
                 if irs != 0:
                     index += goto_intr(irs)
                 else:
+                    cmd, jmp = call(arg)    # Call function with args
                     index += goto(jmp)      # Goes to new address in memory
                     __write(cmd)            # Write result to the bus
                 __fpu_query()               # FPU cycle interruption verification

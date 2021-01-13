@@ -137,10 +137,10 @@ def div(args):
     try:
         R[l] = R[x] %  R[y] if l != 0 else 0
         R[z] = R[x] // R[y] if z != 0 else 0
-        R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
         R[31] = R[31] | 0x01 if R[l] != 0 else R[31] & ~(1<<0x00)
         __incaddr()
     except ZeroDivisionError:
+        R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
         if (R[31] >> 1 & 0x1) == 1:
             __save_context()
             msg = '\n[SOFTWARE INTERRUPTION]'
@@ -350,12 +350,12 @@ def divi(args):
     sw_int = False
     msg = None
     PC = R[29]
-    try:
+    if l != 0:
         R[z] = int(__twos_comp(R[x]) / __twos_comp(l)) if z != 0 else 0x0
         R[z] = R[z] + 2 ** 32 if R[z] < 0 and z != 0 else R[z]
-        R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
+        R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1 << 0x06)
         __incaddr()
-    except ZeroDivisionError:
+    else:
         if (R[31] >> 1 & 0x1) == 1:
             __save_context()
             msg = '\n[SOFTWARE INTERRUPTION]'
@@ -536,11 +536,11 @@ def bat(args):
     CY = R[31] >> 0 & 0x1
     ZN = R[31] >> 6 & 0x1
     if ZN == 0 and CY == 0:
-        jmp = reg
+        jmp = __twos_comp(reg)
         R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
     else:
         __incaddr()
-    ins = 'bat {}'.format(reg).ljust(25)
+    ins = 'bat {}'.format(__twos_comp(reg)).ljust(25)
     cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
     return cmd, jmp
 
@@ -682,11 +682,11 @@ def bne(args):
     PC = R[29]
     ZN = R[31] >> 6 & 0x1
     if ZN == 0:
-        jmp = reg
+        jmp = __twos_comp(reg)
         R[29] = R[29] + 4 + (reg << 2) & 0xFFFFFFFF
     else:
         __incaddr()
-    ins = 'bne {}'.format(reg).ljust(25)
+    ins = 'bne {}'.format(__twos_comp(reg)).ljust(25)
     cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
     return cmd, jmp
 
@@ -888,9 +888,11 @@ def reti(args):
     return cmd, jmp - 1
 
 def cbr(args):
-    _, _, z = __get_index(args)
-    R[z] &= ~(1<<0x00) if z != 0 else R[z]
-    cmd = ''
+    x, _, z = __get_index(args)
+    R[z] &= ~(1<<x) if z != 0 else R[z]
+    ins = 'cbr {}[{}]'.format(__r(z), x).ljust(25)
+    cmd = '{}:\t{}\t{}={}'.format(__hex(__pc()), ins, __r(z, True), __hex(R[z]))
+    __incaddr()
     return cmd
 
 def sbr(args):
@@ -1174,12 +1176,19 @@ def __fpu(content):
             Y = Z.copy()
             HDT = 4
         elif FPU_OP in [7, 8, 9]:
-            z = Z['value'] if Z['type'] is float else __ieee754(float(Z['value']))
+            try:
+                z = Z['value'] if Z['type'] is float else __ieee754(float(Z['value']))
+            except Exception:
+                z = 0        
             Z = operation[FPU_OP](z)
             HDT = 4
         elif FPU_OP in range(10):
-            x = X['value'] if X['type'] is float else __ieee754(float(X['value']))
-            y = Y['value'] if Y['type'] is float else __ieee754(float(Y['value']))
+            try:     
+                x = X['value'] if X['type'] is float else __ieee754(float(X['value']))
+                y = Y['value'] if Y['type'] is float else __ieee754(float(Y['value']))
+            except Exception:
+                x = 0
+                y = 0
             Z, error_code = operation[FPU_OP](hex2float(x), hex2float(y))
             exp_x = x >> 23 & 0xFF
             exp_y = y >> 23 & 0xFF
@@ -1245,7 +1254,7 @@ def __floor(z):
 
 def __round(z):
     res = round(hex2float(z))
-    return {'value': res, 'type': int}
+    return {'value' : res, 'type' : int}
 
 def __ieee754(value):
     return struct.unpack('I', struct.pack('f', value))[0]

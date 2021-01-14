@@ -14,7 +14,8 @@ HDT = 3 # Type of hardware interruption. Default HW constant time (code 3)
 CNT = 0x7FFFFFFF # Default value for the wawtchdog counter
 INT_QUEUE = []   # Interruption queue
 FPU_OP  = 0  # FPU operation flag
-FPU_INT = 0  # Initialize fpu interruption cycle counter 
+FPU_ERR = 0  # FPU error flag
+FPU_INT = 0  # Initialize fpu interruption cycle counter
 INT_ADR = 0  # Keeps track of generated interruption instruction
 TRM_OUT = [] # Terminal output buffer
 TRM_IN  = [] # Terminai input buffer
@@ -427,7 +428,7 @@ def cmpi(args):
     global R
     (x, _, _) = __get_index(args)
     l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
-    CMPI = R[x] - __twos_comp(l)
+    CMPI = R[x] - l
     CMPI31 = CMPI  >> 31 & 0x1
     Rx31 = R[x] >> 31 & 0x1
     l15  = l >> 15 & 0x1
@@ -907,13 +908,6 @@ def __clear_bit(args):
     cmd = cbr(args) if l == 0 else sbr(args)
     return cmd, 0
 
-def __save_context(jmp=0):
-    global R
-    for index in (29, 26, 27):
-        content = R[index] if index != 29 else R[29] + 4 + jmp
-        __overwrite(R[30], 4, content)
-        R[30] -= 4
-
 def __hex(string, length=10):
     return '{0:#0{1}X}'.format(string, length).replace('X','x')
 
@@ -991,25 +985,6 @@ def __begin():
     except Exception:
         __stdout('[Errno ?] Error trying to start program')
 
-def __interrupt(pr=0):
-    global R
-    if pr == 0:
-        msg = '[END OF SIMULATION]'
-        try:
-            __termout()
-            __write(msg)
-            sys.exit()
-        except Exception:
-            __stdout('[Errno ?] Exit with status error')
-    else:
-        msg = '[HARDWARE INTERRUPTION {}]'.format(pr)
-        if pr in [1, 2, 3, 4]:
-            R[26] = 0
-            __write(msg)
-            return pr
-        else:
-            return 0
-
 def __badinstr(args):
     global R
     __save_context()
@@ -1042,7 +1017,7 @@ def __overwrite(address, size, content):
         old = MEM[index]
         MEM[index] = __hex((buffer & ~(mask[size]<<bias) | (content & mask[size])<<bias) & mask[4])
         __stdout('[Debug: Written to memory [{}] @ {}]'.format(__hex(content), __hex(address)))
-        __stdout('[{}] -> [{}] Bias = {}'.format(old, MEM[index], bias))
+        __stdout('[{}] -> [{}]'.format(old, MEM[index], bias))
     else:
         devices = { '0x80808080' : __watchdog, '0x20202020' : __watchdog }
         for i in range(0x88888888 >> 2, 0x8888888C >> 2): devices[hex(i)] = __terminal
@@ -1050,8 +1025,8 @@ def __overwrite(address, size, content):
         for i in range(0x88888888, 0x8888888D): devices[hex(i)] = __terminal
         for i in range(0x80808880, 0x80808890): devices[hex(i)] = __fpu
         try:
-            DEV = address # Store pointer that points at the device being accessed
-            devices[hex(address)](content)
+            DEV = __align(address) # Store pointer that points at the device being accessed
+            devices[hex(DEV)](content)
         except IndexError as ex:
             __stdout(ex)
 
@@ -1094,6 +1069,12 @@ def __termout():
     if TRM_OUT:
         __write('[TERMINAL]')
         __write(''.join([chr(i) for i in TRM_OUT]))
+
+def __align(address):
+    if address in range(0x88888888 >> 2, 0x8888888F >> 2): address <<= 2
+    elif address in range(0x80808880 >> 2, 0x80808890 >> 2): address <<= 2
+    elif address == 0x20202020: address <<= 2
+    return address
 
 def goto_intr(code):
     global R
@@ -1141,9 +1122,8 @@ def __watchdog(content):
     WDG = content >> 31 & 0x1
 
 def __fpu(content):
-    global R, X, Y, Z, CTR, DEV, FPU_INT, FPU_OP, HDT
+    global R, X, Y, Z, CTR, DEV, FPU_INT, FPU_OP, FPU_ERR, HDT
     
-    __stdout('[Debug: FPU processing...]')
     address = DEV
     operation = {
         0 : __nop,
@@ -1171,6 +1151,13 @@ def __fpu(content):
         CTR = content & 0x1F
         FPU_OP = CTR >> 0x0 & 0x1F
         FPU_INT = 1
+        
+        try:
+            __stdout('[Debug: FPU processing. Operation [{}]]'.format(operation[FPU_OP].__name__))
+        except:
+            __stdout('[Debug: Warning. Invalig operation]')
+
+        __stdout('[Debug: CTR [{}] @ [{}]'.format(__hex(CTR), __hex(DEV)))
         if FPU_OP == 0:
             operation[0]()
         elif FPU_OP == 5:
@@ -1183,8 +1170,10 @@ def __fpu(content):
             try:
                 z = Z['value'] if Z['type'] is float else __ieee754(float(Z['value']))
             except Exception:
+                __stdout('[Debug: Warning. FPU ZeroDivision exception]')
                 z = 0        
             Z = operation[FPU_OP](z)
+            __stdout('[Debug: Content of Z = [{}]]'.format(__hex(Z['value'])))
             HDT = 4
         elif FPU_OP in range(10):
             try:     
@@ -1197,36 +1186,14 @@ def __fpu(content):
             exp_x = x >> 23 & 0xFF
             exp_y = y >> 23 & 0xFF
             FPU_INT = abs(exp_x - exp_y) + 1
-            HDT = 2 if error_code == 1 else 3
-            CTR = 0x20 if error_code == 1 else CTR
+            FPU_ERR = error_code
+            HDT = 2 if FPU_ERR == 1 else 3
+            __stdout('[Debug: Content of Z = [{}]]'.format(__hex(Z['value'])))
         else:
-            CTR = 0x20
             HDT = 2
+            FPU_ERR = 1
             FPU_INT = 1
             __stdout('[Debug: FPU invalid operation code [{}]]'.format(hex(FPU_OP)))
-        __stdout('[Debug: Content of Z = [{}]]'.format(__hex(Z['value'])))
-
-def __int_query():
-    global INT_QUEUE
-    if INT_QUEUE:
-        inter = INT_QUEUE.pop(0)
-        return __interrupt(inter)
-    else:
-        return 0
-
-def __fpu_query():
-    global R, FPU_INT, FPU_OP, CTR
-    if FPU_OP != 0:
-        if FPU_INT > 0:
-            FPU_INT -= 1
-            __stdout('[Debug: FPU duty cycle :: {}]'.format(FPU_INT))        
-        else:
-            __save_context(jmp=-4)
-            R[26] = 0x01EEE754
-            R[27] = INT_ADR
-            FPU_OP = 0
-            CTR &= ~(0x1F)
-            __add2queue(HDT)
 
 def __sum(x, y):
     res = {'value': __ieee754(x + y), 'type' : float}
@@ -1278,9 +1245,9 @@ def __countdown():
     else:
         if R[31] >> 1 & 0x1 == 1:
             __save_context(jmp=-4)
-            R[26] = 0xE1AC04DA
-            WDG = 1               # Disable watchdog
             R[27] = R[29]         # Store interruption address
+            R[26] = 0xE1AC04DA    # Store interruption code
+            WDG = 1               # Disable watchdog
             __add2queue(1)        # Add interruption to queue
 
 def __add2queue(code):
@@ -1307,7 +1274,7 @@ def __fpu_query():
             R[27] = INT_ADR
             FPU_OP = 0
             CTR &= ~(0x1F)
-            CTR = 0x20 if FPU_ERR == 1 else CTR
+            CTR |= 0x20 if FPU_ERR == 1 else CTR
             __add2queue(HDT)
 
 def __interrupt(pr=0):
@@ -1323,12 +1290,17 @@ def __interrupt(pr=0):
     else:
         msg = '[HARDWARE INTERRUPTION {}]'.format(pr)
         if pr in [1, 2, 3, 4]:
-            R[26] = 0
             __write(msg)
             return pr
         else:
             return 0
-
+def __save_context(jmp=0):
+    global R
+    for index in (29, 26, 27):
+        content = R[index] if index != 29 else R[29] + 4 + jmp
+        __overwrite(R[30], 4, content)
+        R[30] -= 4
+        
 def hex2float(value):
     value = int(value, 16) if isinstance(value, str) else value
     return struct.unpack(">f", struct.pack(">i", value))[0]
@@ -1350,6 +1322,7 @@ def main(args):
         __stdout('[Debug: Output file not provided, redirecting to /dev/null instead]')
 
     index = 0
+    irs = 0
     arg = __hex(0)
     with open(output, 'w') as bus:
         __init(bus)            # Start bus, if file name provided
@@ -1360,17 +1333,17 @@ def main(args):
                 inst = buffer[index]        # Access buffer at referenced address
                 call = parse_arg(inst)      # Parse instruction word
                 __fpu_query()               # FPU cycle interruption verification
-                __countdown()               # Update watchdog countdown
-                irs  = __int_query()        # Iterruption manager
                 word = 0xFFFFFFFF           # Define 32-bit extractor
                 arg  = int(inst, 16) & word # Extract 32-bit buffer
                 __loadreg(arg)              # Load current instruction to IR
+                irs  = __int_query()        # Iterruption manager
                 if irs != 0:
                     index += goto_intr(irs)
                 else:
                     __store_address()
                     cmd, jmp = call(arg)    # Call function with args
                     index += goto(jmp)      # Goes to new address in memory
+                    __countdown()               # Update watchdog countdown
                     __write(cmd)            # Write result to the bus
             except TypeError:
                 __badinstr(arg)

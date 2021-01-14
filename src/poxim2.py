@@ -1,7 +1,32 @@
-import sys, struct, math
+"""
+Copyright (c) 2021 Saulo G. Felix
 
-# Define general purpose registers
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+"""
+
+import sys
+import struct
+import math
+ 
+# General purpose registers
 # CR -> R[26], IPC -> R[27], IR -> R[28], PC -> R[29], SP -> R[30], SR -> R[31]
+
 R = [uint32 * 0 for uint32 in range(32)] # General purpose registers
 X = { 'value' : 0, 'type' : float } # FPU X register
 Y = { 'value' : 0, 'type' : float } # FPU Y register
@@ -1338,12 +1363,12 @@ def main(args):
                 __loadreg(arg)              # Load current instruction to IR
                 irs  = __int_query()        # Iterruption manager
                 if irs != 0:
-                    index += goto_intr(irs)
+                    index += goto_intr(irs) # In case interruption happens, computes new address
                 else:
                     __store_address()
                     cmd, jmp = call(arg)    # Call function with args
                     index += goto(jmp)      # Goes to new address in memory
-                    __countdown()               # Update watchdog countdown
+                    __countdown()           # Update watchdog countdown
                     __write(cmd)            # Write result to the bus
             except TypeError:
                 __badinstr(arg)

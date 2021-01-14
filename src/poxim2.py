@@ -3,21 +3,21 @@ import sys, struct, math
 # Define general purpose registers
 # CR -> R[26], IPC -> R[27], IR -> R[28], PC -> R[29], SP -> R[30], SR -> R[31]
 R = [uint32 * 0 for uint32 in range(32)] # General purpose registers
-X = {}  # FPU X register
-Y = {}  # FPU Y register
-Z = {}  # FPU Z register
+X = { 'value' : 0, 'type' : float } # FPU X register
+Y = { 'value' : 0, 'type' : float } # FPU Y register
+Z = { 'value' : 0, 'type' : float } # FPU Z register
 CTR = 0 # FPU control multiplexer device
 WDG = 1 # Watchdog flag
 MEM = 0 # Memory device
 DEV = 0 # Device index register
 HDT = 3 # Type of hardware interruption. Default HW constant time (code 3)
 CNT = 0x7FFFFFFF # Default value for the wawtchdog counter
-FPU_OP  = 0      # FPU operation flag
-FPU_INT = 0      # Initialize fpu interruption cycle counter 
-TRM_OUT = []     # Terminal output buffer
-TRM_IN  = []     # Terminai input buffer
-INT_ADR = 0      # Keeps track of generated interruption instruction
 INT_QUEUE = []   # Interruption queue
+FPU_OP  = 0  # FPU operation flag
+FPU_INT = 0  # Initialize fpu interruption cycle counter 
+INT_ADR = 0  # Keeps track of generated interruption instruction
+TRM_OUT = [] # Terminal output buffer
+TRM_IN  = [] # Terminai input buffer
 
 def mov(args):
     global R
@@ -370,7 +370,7 @@ def divi(args):
 
     R[31] = R[31] | 0x20 if args >> 0 & 0xFFFF == 0 else R[31] & ~(1<<0x05)
     ins = 'divi {},{},{}'.format(__r(z), __r(x), __twos_comp(l)).ljust(25)
-    res = 'R{}=R{}/{}={}'.format(z, x, __hex(l), __hex(R[z]))
+    res = '{}={}/{}={}'.format(__r(z, True), __r(x, True), __hex(l), __hex(R[z]))
     cmd = '{}:\t{}\t{},SR={}'.format(__hex(PC), ins, res, __hex(R[31]))
     if sw_int: cmd += msg
     return cmd, jmp
@@ -384,19 +384,18 @@ def modi(args):
     msg = None
     PC = R[29]
     try:
-        from math import remainder, copysign
-        signrx = copysign(1, __twos_comp(R[x]))
-        signl = copysign(1, __twos_comp(l))
+        signrx = math.copysign(1, __twos_comp(R[x]))
+        signl = math.copysign(1, __twos_comp(l))
         reg = 0x0
         if signl == signrx:
             if signl < 0 and signrx < 0:
-                reg = remainder(R[x], l) if z != 0 else R[z]
+                reg = math.remainder(R[x], l) if z != 0 else R[z]
             else:
                 reg = R[x] % l
         elif signl < 0:
-            reg = remainder(R[x], __twos_comp(l)) if z != 0 else R[z]
+            reg = math.remainder(R[x], __twos_comp(l)) if z != 0 else R[z]
         elif signrx < 0:
-            reg = remainder(__twos_comp(R[x]), l) if z != 0 else R[z]
+            reg = math.remainder(__twos_comp(R[x]), l) if z != 0 else R[z]
             
         R[z] = int(reg) + 2 ** 32 & 0xFFFFFFFF if z != 0 else R[z]
         R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x06)
@@ -419,7 +418,7 @@ def modi(args):
         __stdout('[Error ?] Can not resolve for library imports')
     R[31] = R[31] | 0x20 if args >> 0 & 0xFFFF == 0 else R[31] & ~(1<<0x05)
     ins = 'modi {},{},{}'.format(__r(z), __r(x), __twos_comp(l)).ljust(25)
-    res = 'R{}=R{}%{}={}'.format(z, x, __hex(l), __hex(R[z]))
+    res = '{}={}%{}={}'.format(__r(z, True), __r(x, True), __hex(l), __hex(R[z]))
     cmd = '{}:\t{}\t{},SR={}'.format(__hex(PC), ins, res, __hex(R[31]))
     if sw_int: cmd += msg
     return cmd, jmp
@@ -446,9 +445,9 @@ def l8(args):
     (x, _, z) = __get_index(args)
     l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
     address = R[x] + l
-    R[z] = __read(address) >> 24 - (address % 4) * 8 & 0xFF if z != 0 else 0x0
+    R[z] = (__read(address) >> 24 - (address % 4) * 8) & 0xFF if z != 0 else 0x0
     ins = 'l8 {},[{}+{}]'.format(__r(z), __r(x), l).ljust(25)
-    res = 'R{}=MEM[{}]={}'.format(z, __hex(address), __hex(R[z], 4))
+    res = 'R{}=MEM[{}]={}'.format(z, __hex(address), __hex(R[z] & 0xFF, 4))
     cmd = '{}:\t{}\t{}'.format(__hex(__pc()), ins, res)
     __incaddr()
     return cmd, 0
@@ -670,8 +669,7 @@ def blt(args):
     else:
         __incaddr()
 
-    reg = __twos_comp(reg) if reg < 0 else reg
-    ins = 'blt {}'.format(reg).ljust(25)
+    ins = 'blt {}'.format(__twos_comp(reg)).ljust(25)
     cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
     return cmd, jmp
 
@@ -824,6 +822,7 @@ def push(args):
     ins = 'push '
     res = ''
     string = ''
+    __stdout('[Debug: Stack pointer (SP) = [{}]'.format(__hex(SP)))
     for chunk in [v, w, x, y, z]:
         if chunk != 0:
             __overwrite(R[30], 4, R[chunk])
@@ -833,14 +832,14 @@ def push(args):
         else:
             if v == 0:
                 ins = 'push -'.ljust(25)
-                cmd = '{}:\t{}\tMEM[{}]{{}}={{}}'.format(__hex(__pc()), ins, __hex(R[30]))
+                cmd = '{}:\t{}\tMEM[{}]{{}}={{}}'.format(__hex(R[29]), ins, __hex(SP))
                 __incaddr()
                 return cmd, 0
             break
     fields = string.rstrip(',')
     res = 'MEM[{}]{{'.format(__hex(SP)) + res.rstrip(',') + ('}={') + fields.upper() + '}'
     ins = (ins + fields).ljust(25)
-    cmd = '{}:\t{}\t{}'.format(__hex(__pc()), ins, res)
+    cmd = '{}:\t{}\t{}'.format(__hex(R[29]), ins, res)
     __incaddr()
     return cmd, 0
 
@@ -1005,6 +1004,7 @@ def __interrupt(pr=0):
     else:
         msg = '[HARDWARE INTERRUPTION {}]'.format(pr)
         if pr in [1, 2, 3, 4]:
+            R[26] = 0
             __write(msg)
             return pr
         else:
@@ -1032,7 +1032,6 @@ def __overwrite(address, size, content):
         buffer = int(MEM[index], 16)
     except:
         buffer = 0x0
-    byte = {1: 0xFF, 2: 0xFFFF, 3: 0xFFFFFF, 4: 0xFFFFFFFF}
 
     # Device multiplexer. Interchange between devices attached to the bus
     # Terminal : address -> 0x88888888
@@ -1040,7 +1039,10 @@ def __overwrite(address, size, content):
     # Memory   : address -> 0x00000000 : 0x00007FFC
     # FPU      : address -> 0x80808880 : 0x8080888C
     if index <= 0x7FFC:
+        old = MEM[index]
         MEM[index] = __hex((buffer & ~(mask[size]<<bias) | (content & mask[size])<<bias) & mask[4])
+        __stdout('[Debug: Written to memory [{}] @ {}]'.format(__hex(content), __hex(address)))
+        __stdout('[{}] -> [{}] Bias = {}'.format(old, MEM[index], bias))
     else:
         devices = { '0x80808080' : __watchdog, '0x20202020' : __watchdog }
         for i in range(0x88888888 >> 2, 0x8888888C >> 2): devices[hex(i)] = __terminal
@@ -1056,17 +1058,17 @@ def __overwrite(address, size, content):
 def __read(address=None):
     global MEM
     if address is not None:
-        __stdout('[Debug: Read from memory @ {}]'.format(__hex(address)))
         index = address // 4
         if index <= 0x7FFC:
+            res = int(MEM[index], 16)
+            __stdout('[Debug: Read from memory [{}] @ {}]'.format(__hex(res), __hex(address)))
             return int(MEM[index], 16)
         else:
-            reg = { 
-                '0x80808880' : X['value'],
-                '0x80808884' : Y['value'],
-                '0x80808888' : Z['value'],
-                '0x8080888f' : CTR
-            }
+            reg = {}
+            for index in range(0x80808880, 0x80808884): reg[hex(index)] = X['value']
+            for index in range(0x80808884, 0x80808888): reg[hex(index)] = Y['value']
+            for index in range(0x80808888, 0x8080888C): reg[hex(index)] = Z['value']
+            for index in range(0x8080888C, 0x80808890): reg[hex(index)] = CTR
             return reg[hex(address)]
     else:
         return MEM
@@ -1134,7 +1136,6 @@ def __terminal(content):
         
 def __watchdog(content):
     global WDG, DEV, CNT
-    R[26] = 0xE1AC04DA
     DEV = 0x80808080
     CNT = content & 0x7FFFFFFF
     WDG = content >> 31 & 0x1
@@ -1275,9 +1276,9 @@ def __countdown():
             CNT = 0x7FFFFFFF      # Reset counter
             WDG = 0               # Disable watchdog
     else:
-        R[26] = 0xE1AC04DA
         if R[31] >> 1 & 0x1 == 1:
-            __save_context()
+            __save_context(jmp=-4)
+            R[26] = 0xE1AC04DA
             WDG = 1               # Disable watchdog
             R[27] = R[29]         # Store interruption address
             __add2queue(1)        # Add interruption to queue

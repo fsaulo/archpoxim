@@ -1,4 +1,5 @@
 check_output
 progm_output
+*.debug
 build/
 .vscode/

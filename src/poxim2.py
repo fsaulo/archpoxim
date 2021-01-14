@@ -1025,6 +1025,9 @@ def __badinstr(args):
 def __overwrite(address, size, content):
     global MEM, DEV
     index = address // 4
+    bias = 24 - (address % 4) * 8 if size != 4 else 0
+    mask = {1: 0xFF, 2: 0xFFFF, 3: 0xFFFFFF, 4: 0xFFFFFFFF}
+    
     try:
         buffer = int(MEM[index], 16)
     except:
@@ -1037,7 +1040,7 @@ def __overwrite(address, size, content):
     # Memory   : address -> 0x00000000 : 0x00007FFC
     # FPU      : address -> 0x80808880 : 0x8080888C
     if index <= 0x7FFC:
-        MEM[index] = __hex(buffer & ~byte[size] | content & byte[size])
+        MEM[index] = __hex((buffer & ~(mask[size]<<bias) | (content & mask[size])<<bias) & mask[4])
     else:
         devices = { '0x80808080' : __watchdog, '0x20202020' : __watchdog }
         for i in range(0x88888888 >> 2, 0x8888888C >> 2): devices[hex(i)] = __terminal

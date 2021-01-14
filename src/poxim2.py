@@ -1287,6 +1287,48 @@ def __add2queue(code):
     global INT_QUEUE
     INT_QUEUE.append(code)
 
+def __int_query():
+    global INT_QUEUE
+    if INT_QUEUE:
+        inter = INT_QUEUE.pop(0)
+        return __interrupt(inter)
+    else:
+        return 0
+
+def __fpu_query():
+    global R, FPU_INT, FPU_OP, CTR
+    if FPU_OP != 0:
+        if FPU_INT > 0:
+            FPU_INT -= 1
+            __stdout('[Debug: FPU duty cycle :: {}]'.format(FPU_INT))
+        else:
+            __save_context(jmp=-4)
+            R[26] = 0x01EEE754
+            R[27] = INT_ADR
+            FPU_OP = 0
+            CTR &= ~(0x1F)
+            CTR = 0x20 if FPU_ERR == 1 else CTR
+            __add2queue(HDT)
+
+def __interrupt(pr=0):
+    global R
+    if pr == 0:
+        msg = '[END OF SIMULATION]'
+        try:
+            __termout()
+            __write(msg)
+            sys.exit()
+        except Exception:
+            __stdout('[Errno ?] Exit with status error')
+    else:
+        msg = '[HARDWARE INTERRUPTION {}]'.format(pr)
+        if pr in [1, 2, 3, 4]:
+            R[26] = 0
+            __write(msg)
+            return pr
+        else:
+            return 0
+
 def hex2float(value):
     value = int(value, 16) if isinstance(value, str) else value
     return struct.unpack(">f", struct.pack(">i", value))[0]

@@ -1273,7 +1273,8 @@ def __countdown():
             WDG = 0               # Disable watchdog
     else:
         R[26] = 0xE1AC04DA
-        if R[31] >> 1 & 0x1 == 1: # If interruption enabled
+        if R[31] >> 1 & 0x1 == 1:
+            __save_context()
             WDG = 1               # Disable watchdog
             R[27] = R[29]         # Store interruption address
             __add2queue(1)        # Add interruption to queue

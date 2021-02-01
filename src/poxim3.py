@@ -116,8 +116,8 @@ def sll(args):
     A = (R[z] << 32 | R[x])
     R[31] = R[31] | 0x40 if A    == 0 else R[31] & ~(1<<0x06)
     R[31] = R[31] | 0x01 if R[z] != 0 else R[31] & ~(1<<0x00)
-    ins = 'sll {},{},{},{}'.format(__r(z), __r(x), __r(x), l).ljust(25)
-    res = 'R{}:R{}=R{}:R{}<<{}={}'.format(z, x, z, y, l+1, __hex(A, 18))
+    ins = 'sll {},{},{},{}'.format(__r(z), __r(x), __r(y), l).ljust(25)
+    res = '{}:{}={}:{}<<{}={}'.format(__r(z, True), __r(x, True), __r(z, True), __r(y, True), l+1, __hex(A, 18))
     cmd = '{}:\t{}\t{},SR={}'.format(__hex(__pc()),ins, res, __hex(R[31]))
     __incaddr()
     return cmd, 0
@@ -454,7 +454,7 @@ def cmpi(args):
     global R
     (x, _, _) = __get_index(args)
     l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
-    CMPI = R[x] - l
+    CMPI = R[x] - __twos_comp(l)
     CMPI31 = CMPI  >> 31 & 0x1
     Rx31 = R[x] >> 31 & 0x1
     l15  = l >> 15 & 0x1
@@ -497,8 +497,9 @@ def l32(args):
     l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
     address = R[x] + l << 2
     R[z] = __read(address) & 0xFFFFFFFF if z != 0 else 0x0
+    print(R[z])
     ins = 'l32 {},[{}+{}]'.format(__r(z), __r(x), l).ljust(25)
-    res = 'R{}=MEM[{}]={}'.format(z, __hex(address), __hex(R[z]))
+    res = '{}=MEM[{}]={}'.format(__r(z, True), __hex(address), __hex(R[z]))
     cmd = '{}:\t{}\t{}'.format(__hex(__pc()), ins, res)
     __incaddr()
     return cmd, 0
@@ -510,7 +511,7 @@ def s8(args):
     address = R[x] + l
     __overwrite(address, 1, R[z])
     ins = 's8 [{}+{}],{}'.format(__r(x), l, __r(z)).ljust(25)
-    res = 'MEM[{}]=R{}={}'.format(__hex(address), z, __hex(R[z], 4))
+    res = 'MEM[{}]={}={}'.format(__hex(address), __r(z, True), __hex(R[z] & 0xFF, 4))
     cmd = '{}:\t{}\t{}'.format(__hex(__pc()), ins, res)
     __incaddr()
     return cmd, 0
@@ -1056,8 +1057,8 @@ def __badinstr(args):
 def __overwrite(address, size, content):
     global MEM, DEV
     index = address // 4
-    bias = 24 - (address % 4) * 8 if size != 4 else 0
-    mask = {1: 0xFF, 2: 0xFFFF, 3: 0xFFFFFF, 4: 0xFFFFFFFF}
+    bias = ((24-size*8) - (address % 4) * 8)+8 if size != 4 else 0
+    mask = {1: 0xFF, 2: 0xFFFF, 3:0xFFFF, 4: 0xFFFFFFFF}
     
     try:
         buffer = int(MEM[index], 16)

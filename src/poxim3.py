@@ -497,7 +497,6 @@ def l32(args):
     l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
     address = R[x] + l << 2
     R[z] = __read(address) & 0xFFFFFFFF if z != 0 else 0x0
-    print(R[z])
     ins = 'l32 {},[{}+{}]'.format(__r(z), __r(x), l).ljust(25)
     res = '{}=MEM[{}]={}'.format(__r(z, True), __hex(address), __hex(R[z]))
     cmd = '{}:\t{}\t{}'.format(__hex(__pc()), ins, res)
@@ -1073,8 +1072,8 @@ def __overwrite(address, size, content):
     if index <= 0x7FFC:
         old = MEM[index]
         MEM[index] = __hex((buffer & ~(mask[size]<<bias) | (content & mask[size])<<bias) & mask[4])
-        __stdout('[Debug: Written to memory [{}] @ {}]'.format(__hex(content), __hex(address)))
-        __stdout('[{}] -> [{}]'.format(old, MEM[index], bias))
+        msg = '[Debug: Written to memory {} @ {} '.format(__hex(content), __hex(address))
+        __stdout(msg + '=> {{{} -> {}}}]'.format(old, MEM[index], bias))
     else:
         devices = { '0x80808080' : __watchdog, '0x20202020' : __watchdog }
         for i in range(0x88888888 >> 2, 0x8888888C >> 2): devices[hex(i)] = __terminal
@@ -1096,7 +1095,8 @@ def __read(address=None):
             __stdout('[Debug: Read from memory [{}] @ {}]'.format(__hex(res), __hex(address)))
             return int(MEM[index], 16)
         else:
-            reg = { '0x8888888b' : 0, '0x8888888c' : random.randint(0, 0xFF) << 8 }
+            random_generator = random.randint(0, 0xFF) << 8
+            reg = { '0x8888888a' : random_generator, '0x8888888c' : random_generator }
             for index in range(0x80808880, 0x80808884): reg[hex(index)] = X['value']
             for index in range(0x80808884, 0x80808888): reg[hex(index)] = Y['value']
             for index in range(0x80808888, 0x8080888C): reg[hex(index)] = Z['value']

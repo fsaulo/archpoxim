@@ -1,26 +1,59 @@
-import sys
+"""
+Copyright (c) 2021 Saulo G. Felix
 
-# Define general purpose registers
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+"""
+
+import sys
+import struct
+import math
+import random
+ 
+# General purpose registers
 # CR -> R[26], IPC -> R[27], IR -> R[28], PC -> R[29], SP -> R[30], SR -> R[31]
-R   = [uint32 * 0 for uint32 in range(32)]
-CNT = 0x7FFFFFFF
-WDG = 1
-MEM = 0
-DEV = 0
-TRM_OUT = []
-TRM_IN  = []
+
+R = [uint32 * 0 for uint32 in range(32)] # General purpose registers
+X = { 'value' : 0, 'type' : float } # FPU X register
+Y = { 'value' : 0, 'type' : float } # FPU Y register
+Z = { 'value' : 0, 'type' : float } # FPU Z register
+CTR = 0 # FPU control multiplexer device
+WDG = 1 # Watchdog flag
+MEM = 0 # Memory device
+DEV = 0 # Device index register
+HDT = 3 # Type of hardware interruption. Default HW constant time (code 3)
+CNT = 0x7FFFFFFF # Default value for the wawtchdog counter
+INT_QUEUE = []   # Interruption queue
+FPU_OP  = 0  # FPU operation flag
+FPU_ERR = 0  # FPU error flag
+FPU_INT = 0  # Initialize fpu interruption cycle counter
+INT_ADR = 0  # Keeps track of generated interruption instruction
+TRM_OUT = [] # Terminal output buffer
+TRM_IN  = [] # Terminai input buffer
 
 def mov(args):
     global R
-    if args != 0:
-        z    = args >> 21 & 0x1F
-        R[z] = args >>  0 & 0x1FFFFF if z != 0 else 0x0
-        ins  = 'mov {},{}'.format(__r(z), R[z]).ljust(25)
-        cmd  = '{}:\t{}\t{}={}'.format(__hex(__pc()), ins, __r(z).upper(), __hex(R[z]))
-        __incaddr()
-        return cmd, 0
-    else:
-        return __nop(), 0
+    z    = args >> 21 & 0x1F
+    R[z] = args >>  0 & 0x1FFFFF if z != 0 else 0x0
+    ins  = 'mov {},{}'.format(__r(z), R[z]).ljust(25)
+    cmd  = '{}:\t{}\t{}={}'.format(__hex(__pc()), ins, __r(z).upper(), __hex(R[z]))
+    __incaddr()
+    return cmd, 0
 
 def add(args):
     global R
@@ -131,10 +164,10 @@ def div(args):
     try:
         R[l] = R[x] %  R[y] if l != 0 else 0
         R[z] = R[x] // R[y] if z != 0 else 0
-        R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
         R[31] = R[31] | 0x01 if R[l] != 0 else R[31] & ~(1<<0x00)
         __incaddr()
     except ZeroDivisionError:
+        R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
         if (R[31] >> 1 & 0x1) == 1:
             __save_context()
             msg = '\n[SOFTWARE INTERRUPTION]'
@@ -344,12 +377,12 @@ def divi(args):
     sw_int = False
     msg = None
     PC = R[29]
-    try:
+    if l != 0:
         R[z] = int(__twos_comp(R[x]) / __twos_comp(l)) if z != 0 else 0x0
         R[z] = R[z] + 2 ** 32 if R[z] < 0 and z != 0 else R[z]
-        R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1<<0x06)
+        R[31] = R[31] | 0x40 if R[z] == 0 else R[31] & ~(1 << 0x06)
         __incaddr()
-    except ZeroDivisionError:
+    else:
         if (R[31] >> 1 & 0x1) == 1:
             __save_context()
             msg = '\n[SOFTWARE INTERRUPTION]'
@@ -364,7 +397,7 @@ def divi(args):
 
     R[31] = R[31] | 0x20 if args >> 0 & 0xFFFF == 0 else R[31] & ~(1<<0x05)
     ins = 'divi {},{},{}'.format(__r(z), __r(x), __twos_comp(l)).ljust(25)
-    res = 'R{}=R{}/{}={}'.format(z, x, __hex(l), __hex(R[z]))
+    res = '{}={}/{}={}'.format(__r(z, True), __r(x, True), __hex(l), __hex(R[z]))
     cmd = '{}:\t{}\t{},SR={}'.format(__hex(PC), ins, res, __hex(R[31]))
     if sw_int: cmd += msg
     return cmd, jmp
@@ -378,19 +411,18 @@ def modi(args):
     msg = None
     PC = R[29]
     try:
-        from math import remainder, copysign
-        signrx = copysign(1, __twos_comp(R[x]))
-        signl = copysign(1, __twos_comp(l))
+        signrx = math.copysign(1, __twos_comp(R[x]))
+        signl = math.copysign(1, __twos_comp(l))
         reg = 0x0
         if signl == signrx:
             if signl < 0 and signrx < 0:
-                reg = remainder(R[x], l) if z != 0 else R[z]
+                reg = math.remainder(R[x], l) if z != 0 else R[z]
             else:
                 reg = R[x] % l
         elif signl < 0:
-            reg = remainder(R[x], __twos_comp(l)) if z != 0 else R[z]
+            reg = math.remainder(R[x], __twos_comp(l)) if z != 0 else R[z]
         elif signrx < 0:
-            reg = remainder(__twos_comp(R[x]), l) if z != 0 else R[z]
+            reg = math.remainder(__twos_comp(R[x]), l) if z != 0 else R[z]
             
         R[z] = int(reg) + 2 ** 32 & 0xFFFFFFFF if z != 0 else R[z]
         R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x06)
@@ -413,7 +445,7 @@ def modi(args):
         __stdout('[Error ?] Can not resolve for library imports')
     R[31] = R[31] | 0x20 if args >> 0 & 0xFFFF == 0 else R[31] & ~(1<<0x05)
     ins = 'modi {},{},{}'.format(__r(z), __r(x), __twos_comp(l)).ljust(25)
-    res = 'R{}=R{}%{}={}'.format(z, x, __hex(l), __hex(R[z]))
+    res = '{}={}%{}={}'.format(__r(z, True), __r(x, True), __hex(l), __hex(R[z]))
     cmd = '{}:\t{}\t{},SR={}'.format(__hex(PC), ins, res, __hex(R[31]))
     if sw_int: cmd += msg
     return cmd, jmp
@@ -422,7 +454,7 @@ def cmpi(args):
     global R
     (x, _, _) = __get_index(args)
     l = ((args >> 15 & 0x1) * 0xFFFF << 16 | args >> 0 & 0xFFFF) & 0xFFFFFFFF
-    CMPI = R[x] - __twos_comp(l)
+    CMPI = R[x] - l
     CMPI31 = CMPI  >> 31 & 0x1
     Rx31 = R[x] >> 31 & 0x1
     l15  = l >> 15 & 0x1
@@ -530,11 +562,11 @@ def bat(args):
     CY = R[31] >> 0 & 0x1
     ZN = R[31] >> 6 & 0x1
     if ZN == 0 and CY == 0:
-        jmp = reg
+        jmp = __twos_comp(reg)
         R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
     else:
         __incaddr()
-    ins = 'bat {}'.format(reg).ljust(25)
+    ins = 'bat {}'.format(__twos_comp(reg)).ljust(25)
     cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
     return cmd, jmp
 
@@ -576,11 +608,11 @@ def beq(args):
     PC = R[29]
     ZN = R[31] >> 6 & 0x1
     if ZN == 1:
-        jmp = reg
+        jmp = __twos_comp(reg)
         R[29] = R[29] + 4 + (jmp << 2) & 0xFFFFFFFF
     else:
         __incaddr()
-    ins = 'beq {}'.format(reg).ljust(25)
+    ins = 'beq {}'.format(__twos_comp(reg)).ljust(25)
     cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
     return cmd, jmp
 
@@ -664,8 +696,7 @@ def blt(args):
     else:
         __incaddr()
 
-    reg = __twos_comp(reg) if reg < 0 else reg
-    ins = 'blt {}'.format(reg).ljust(25)
+    ins = 'blt {}'.format(__twos_comp(reg)).ljust(25)
     cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
     return cmd, jmp
 
@@ -676,11 +707,11 @@ def bne(args):
     PC = R[29]
     ZN = R[31] >> 6 & 0x1
     if ZN == 0:
-        jmp = reg
+        jmp = __twos_comp(reg)
         R[29] = R[29] + 4 + (reg << 2) & 0xFFFFFFFF
     else:
         __incaddr()
-    ins = 'bne {}'.format(reg).ljust(25)
+    ins = 'bne {}'.format(__twos_comp(reg)).ljust(25)
     cmd = '{}:\t{}\tPC={}'.format(__hex(PC), ins, __hex(R[29]))
     return cmd, jmp
 
@@ -818,6 +849,7 @@ def push(args):
     ins = 'push '
     res = ''
     string = ''
+    __stdout('[Debug: Stack pointer (SP) = [{}]]'.format(__hex(SP)))
     for chunk in [v, w, x, y, z]:
         if chunk != 0:
             __overwrite(R[30], 4, R[chunk])
@@ -827,14 +859,14 @@ def push(args):
         else:
             if v == 0:
                 ins = 'push -'.ljust(25)
-                cmd = '{}:\t{}\tMEM[{}]{{}}={{}}'.format(__hex(__pc()), ins, __hex(R[30]))
+                cmd = '{}:\t{}\tMEM[{}]{{}}={{}}'.format(__hex(R[29]), ins, __hex(SP))
                 __incaddr()
                 return cmd, 0
             break
     fields = string.rstrip(',')
     res = 'MEM[{}]{{'.format(__hex(SP)) + res.rstrip(',') + ('}={') + fields.upper() + '}'
     ins = (ins + fields).ljust(25)
-    cmd = '{}:\t{}\t{}'.format(__hex(__pc()), ins, res)
+    cmd = '{}:\t{}\t{}'.format(__hex(R[29]), ins, res)
     __incaddr()
     return cmd, 0
 
@@ -882,9 +914,11 @@ def reti(args):
     return cmd, jmp - 1
 
 def cbr(args):
-    _, _, z = __get_index(args)
-    R[z] &= ~(1<<0x00) if z != 0 else R[z]
-    cmd = ''
+    x, _, z = __get_index(args)
+    R[z] &= ~(1<<x) if z != 0 else R[z]
+    ins = 'cbr {}[{}]'.format(__r(z), x).ljust(25)
+    cmd = '{}:\t{}\t{}={}'.format(__hex(__pc()), ins, __r(z, True), __hex(R[z]))
+    __incaddr()
     return cmd
 
 def sbr(args):
@@ -899,13 +933,6 @@ def __clear_bit(args):
     l = args >> 0 & 0x1
     cmd = cbr(args) if l == 0 else sbr(args)
     return cmd, 0
-
-def __save_context():
-    global R
-    for index in (29, 26, 27):
-        content = R[index] if index != 29 else R[29] + 4
-        __overwrite(R[30], 4, content)
-        R[30] -= 4
 
 def __hex(string, length=10):
     return '{0:#0{1}X}'.format(string, length).replace('X','x')
@@ -931,13 +958,43 @@ def __subarg(args):
         return subfunc[hex(index)](args)
     except KeyError:
         __badinstr(args)
-
+    
 def __stdout(output, end='\n'):
     if debug:
         print(output, end=end)
 
+def __read_stdin(args):
+    global TRM_OUT
+    if '--stdin' in args:
+        fileinput = []
+        index = args.index('--stdin') + 1
+        try:
+            with open(args[index], 'rb') as f:
+                while (byte := f.read(1)):
+                    fileinput.append(byte)
+            __stdout('[Debug: Read from standard input (STDIN)]')
+        except FileNotFoundError:
+            return
+        TRM_IN.append(fileinput)
+
+def __get_stdinbyte():
+    global TRM_IN
+    if TRM_IN:
+        try:
+            byte = int.from_bytes(TRM_IN[0].pop(0), "big") & 0xFF
+            return byte             
+        except IndexError:
+            __interrupt(0)
+        except TypeError:
+            TRM_IN.pop(0)
+
+def __randint():
+    import random
+    num = random.randint(0, 0xFF)
+    return num
+    
 def __nop():
-    return None # Nothing to do here...
+    pass # Nothing to do here...
 
 def __pc():
     return R[29]
@@ -984,24 +1041,6 @@ def __begin():
     except Exception:
         __stdout('[Errno ?] Error trying to start program')
 
-def __interrupt(pr=0):
-    global R
-    if pr == 0:
-        msg = '[END OF SIMULATION]'
-        try:
-            __termout()
-            __write(msg)
-            sys.exit()
-        except Exception:
-            __stdout('[Errno ?] Exit with status error')
-    else:
-        msg = '[HARDWARE INTERRUPTION {}]'.format(pr)
-        if pr == 1:
-            __write(msg)
-            return 1
-        else:
-            return 0
-
 def __badinstr(args):
     global R
     __save_context()
@@ -1017,11 +1056,13 @@ def __badinstr(args):
 def __overwrite(address, size, content):
     global MEM, DEV
     index = address // 4
+    bias = 24 - (address % 4) * 8 if size != 4 else 0
+    mask = {1: 0xFF, 2: 0xFFFF, 3: 0xFFFFFF, 4: 0xFFFFFFFF}
+    
     try:
         buffer = int(MEM[index], 16)
     except:
         buffer = 0x0
-    byte = {1: 0xFF, 2: 0xFFFF, 3: 0xFFFFFF, 4: 0xFFFFFFFF}
 
     # Device multiplexer. Interchange between devices attached to the bus
     # Terminal : address -> 0x88888888
@@ -1029,23 +1070,37 @@ def __overwrite(address, size, content):
     # Memory   : address -> 0x00000000 : 0x00007FFC
     # FPU      : address -> 0x80808880 : 0x8080888C
     if index <= 0x7FFC:
-        MEM[index] = __hex(buffer & ~byte[size] | content & byte[size])
+        old = MEM[index]
+        MEM[index] = __hex((buffer & ~(mask[size]<<bias) | (content & mask[size])<<bias) & mask[4])
+        __stdout('[Debug: Written to memory [{}] @ {}]'.format(__hex(content), __hex(address)))
+        __stdout('[{}] -> [{}]'.format(old, MEM[index], bias))
     else:
-        devices = { '0x80808080' : __watchdog }
-        for i in range(0x88888888, 0x8888888C): devices[hex(i)] = __terminal
-        for i in range(0x80808880, 0x8080888D): devices[hex(i)] = __fpu
+        devices = { '0x80808080' : __watchdog, '0x20202020' : __watchdog }
+        for i in range(0x88888888 >> 2, 0x8888888C >> 2): devices[hex(i)] = __terminal
+        for i in range(0x80808880 >> 2, 0x80808890 >> 2): devices[hex(i)] = __fpu
+        for i in range(0x88888888, 0x8888888D): devices[hex(i)] = __terminal
+        for i in range(0x80808880, 0x80808890): devices[hex(i)] = __fpu
         try:
-            DEV = address # Store pointer to point at the device being accessed
-            devices[hex(address)](content)
+            DEV = __align(address) # Store pointer that points at the device being accessed
+            devices[hex(DEV)](content)
         except IndexError as ex:
             __stdout(ex)
 
 def __read(address=None):
     global MEM
-    __stdout('[Debug: Read from memory @ {}]'.format(__hex(address)))
     if address is not None:
         index = address // 4
-        return int(MEM[index], 16)
+        if index <= 0x7FFC:
+            res = int(MEM[index], 16)
+            __stdout('[Debug: Read from memory [{}] @ {}]'.format(__hex(res), __hex(address)))
+            return int(MEM[index], 16)
+        else:
+            reg = { '0x8888888b' : 0, '0x8888888c' : random.randint(0, 0xFF) << 8 }
+            for index in range(0x80808880, 0x80808884): reg[hex(index)] = X['value']
+            for index in range(0x80808884, 0x80808888): reg[hex(index)] = Y['value']
+            for index in range(0x80808888, 0x8080888C): reg[hex(index)] = Z['value']
+            for index in range(0x8080888C, 0x80808890): reg[hex(index)] = CTR
+            return reg[hex(address)]
     else:
         return MEM
 
@@ -1055,12 +1110,10 @@ def __load_program(prog):
     word_count = 0
     for byte in range(0x7FFC - len(prog)):
         MEM.append(__hex(0))
-    __stdout('[Debug: Program loaded...]')
-    for word in MEM:
-        if word != '0x00000000': 
+    for element in MEM:
+        if element != '0x00000000':
             word_count += 1
-            __stdout(word)
-    __stdout('[Debug: Loaded {} bytes into memory]'.format(word_count*4))
+    __stdout('[Debug: Program loaded {} bytes into memory]'.format(word_count*4))
 
 def __init(line):
     global bus
@@ -1071,19 +1124,27 @@ def __termout():
         __write('[TERMINAL]')
         __write(''.join([chr(i) for i in TRM_OUT]))
 
-def __goto_intr(code):
+def __align(address):
+    if address in range(0x88888888 >> 2, 0x8888888F >> 2): address <<= 2
+    elif address in range(0x80808880 >> 2, 0x80808890 >> 2): address <<= 2
+    elif address == 0x20202020: address <<= 2
+    return address
+
+def goto_intr(code):
     global R
     # Jump to interruption address.
     # HW1 : code == 1 -> address => 0x00000010
     # HW2 : code == 2 -> address => 0x00000014    
     # HW3 : code == 3 -> address => 0x00000018
     # HW4 : code == 4 -> address => 0x0000001C
-    address = (3 + code) * 4     # Begin at 0x6 + '4*code'
-    jmp = (address - R[29]) // 4 # Branch 'jmp' adresses
-    R[29] = address              # Update program counter with new address
+    address = 0xC + 4*code    # Begins at 0x10 (code >= 1)
+    PC  = R[29]               # Save current address
+    jmp = (address - PC) // 4 # Branch 'jmp' adresses
+    R[29] = address           # Update program counter with new address
+    __stdout('[Debug: Branching @ {} -> {}]'.format(__hex(PC), __hex(R[29])))
     return jmp
 
-def __goto(arg, irs=0):
+def goto(arg, irs=0):
     if arg == 0 or arg is None:
         return 1
     else:
@@ -1102,21 +1163,130 @@ def __write(line, end='\n'):
             pass
 
 def __terminal(content):
-    global R, DEV, TRM_OUT
+    global R, DEV, TRM_OUT, TRM_IN
     if DEV == 0x8888888B:
-        TRM_OUT.append(content)
-    elif DEV == 0x8888888A:     # This is something to investigate further
-        TRM_IN.append(content)
-
-def __fpu(content):
-    pass
-
+        TRM_OUT.append(content & 0xFF)
+    elif DEV == 0x8888888A:
+        TRM_IN.append(content & 0xFF)
+        
 def __watchdog(content):
     global WDG, DEV, CNT
-    R[26] = 0xE1AC04DA
     DEV = 0x80808080
     CNT = content & 0x7FFFFFFF
     WDG = content >> 31 & 0x1
+
+def __fpu(content):
+    global R, X, Y, Z, CTR, DEV, FPU_INT, FPU_OP, FPU_ERR, HDT
+    
+    address = DEV
+    operation = {
+        0 : __nop,
+        1 : __sum,
+        2 : __sub,
+        3 : __mul,
+        4 : __div,
+        5 : '__atx',
+        6 : '__aty',
+        7 : __ceil,
+        8 : __floor,
+        9 : __round 
+    }
+    
+    if address in range(0x80808880, 0x80808884):
+        X = { 'value' : content, 'type' : int }
+        __stdout('[Debug: Content of X = [{}]'.format(__hex(X['value'])))
+    elif address in range(0x80808884, 0x80808888):  
+        Y = { 'value' : content, 'type' : int }
+        __stdout('[Debug: Content of Y = [{}]'.format(__hex(Y['value'])))
+    elif address in range(0x80808888, 0x8080888C):
+        Z = { 'value' : content, 'type' : int }
+        __stdout('[Debug: Content of Z = [{}]'.format(__hex(Z['value'])))
+    elif address in range(0x8080888C, 0x80808890):
+        CTR = content & 0x1F
+        FPU_OP = CTR >> 0x0 & 0x1F
+        FPU_INT = 1
+        
+        try:
+            __stdout('[Debug: FPU processing. Operation [{}]]'.format(operation[FPU_OP].__name__))
+        except:
+            __stdout('[Debug: Warning. Invalig operation]')
+
+        __stdout('[Debug: CTR [{}] @ [{}]'.format(__hex(CTR), __hex(DEV)))
+        if FPU_OP == 0:
+            operation[0]()
+        elif FPU_OP == 5:
+            X = Z.copy()
+            HDT = 4
+        elif FPU_OP == 6:
+            Y = Z.copy()
+            HDT = 4
+        elif FPU_OP in [7, 8, 9]:
+            try:
+                z = Z['value'] if Z['type'] is float else __ieee754(float(Z['value']))
+            except Exception:
+                __stdout('[Debug: Warning. FPU ZeroDivision exception]')
+                z = 0        
+            Z = operation[FPU_OP](z)
+            __stdout('[Debug: Content of Z = [{}]]'.format(__hex(Z['value'])))
+            HDT = 4
+        elif FPU_OP in range(10):
+            try:     
+                x = X['value'] if X['type'] is float else __ieee754(float(X['value']))
+                y = Y['value'] if Y['type'] is float else __ieee754(float(Y['value']))
+            except Exception:
+                x = 0
+                y = 0
+            Z, error_code = operation[FPU_OP](hex2float(x), hex2float(y))
+            exp_x = x >> 23 & 0xFF
+            exp_y = y >> 23 & 0xFF
+            FPU_INT = abs(exp_x - exp_y) + 1
+            FPU_ERR = error_code
+            HDT = 2 if FPU_ERR == 1 else 3
+            __stdout('[Debug: Content of Z = [{}]]'.format(__hex(Z['value'])))
+        else:
+            HDT = 2
+            FPU_ERR = 1
+            FPU_INT = 1
+            __stdout('[Debug: FPU invalid operation code [{}]]'.format(hex(FPU_OP)))
+
+def __sum(x, y):
+    res = {'value': __ieee754(x + y), 'type' : float}
+    return (res, 0)
+
+def __sub(x, y):
+    res = {'value': __ieee754(x - y), 'type': float}
+    return (res, 0)
+
+def __mul(x, y):
+    res = {'value': __ieee754(x * y), 'type': float}
+    return (res, 0)
+
+def __div(x, y):
+    res = Z
+    if y != 0:
+        res['value'] = __ieee754(x / y)
+        return (res, 0)
+    else:
+        return (res, 1)
+
+def __ceil(z):
+    res = math.ceil(hex2float(z))
+    return {'value' : res, 'type' : int}
+
+def __floor(z):
+    res = math.floor(hex2float(z))
+    return {'value' : res, 'type' : int}
+
+def __round(z):
+    res = round(hex2float(z))
+    return {'value' : res, 'type' : int}
+
+def __ieee754(value):
+    return struct.unpack('I', struct.pack('f', value))[0]
+
+def __store_address():
+    global INT_ADR
+    INT_ADR = R[29]
 
 def __countdown():
     global WDG, CNT, R
@@ -1126,14 +1296,69 @@ def __countdown():
         else: 
             CNT = 0x7FFFFFFF      # Reset counter
             WDG = 0               # Disable watchdog
-        return 0
     else:
-        R[26] = 0xE1AC04DA
-        if R[31] >> 1 & 0x1 == 1: # If interruption enabled
-            WDG = 1               # Disable watchdog
+        if R[31] >> 1 & 0x1 == 1:
+            __save_context(jmp=-4)
             R[27] = R[29]         # Store interruption address
-            return __interrupt(1) # Return interruption status
-    return 0
+            R[26] = 0xE1AC04DA    # Store interruption code
+            WDG = 1               # Disable watchdog
+            __add2queue(1)        # Add interruption to queue
+
+def __add2queue(code):
+    global INT_QUEUE
+    INT_QUEUE.append(code)
+
+def __int_query():
+    global INT_QUEUE
+    if INT_QUEUE:
+        inter = INT_QUEUE.pop(0)
+        return __interrupt(inter)
+    else:
+        return 0
+
+def __fpu_query():
+    global R, FPU_INT, FPU_OP, CTR
+    if FPU_OP != 0:
+        if FPU_INT > 0:
+            FPU_INT -= 1
+            __stdout('[Debug: FPU duty cycle :: {}]'.format(FPU_INT))
+        else:
+            __save_context(jmp=-4)
+            R[26] = 0x01EEE754
+            R[27] = INT_ADR
+            FPU_OP = 0
+            CTR &= ~(0x1F)
+            CTR |= 0x20 if FPU_ERR == 1 else CTR
+            __add2queue(HDT)
+
+def __interrupt(pr=0):
+    global R
+    if pr == 0:
+        msg = '[END OF SIMULATION]'
+        try:
+            __termout()
+            __write(msg)
+            sys.exit()
+        except Exception:
+            __stdout('[Errno ?] Exit with status error')
+    else:
+        msg = '[HARDWARE INTERRUPTION {}]'.format(pr)
+        if pr in [1, 2, 3, 4]:
+            __write(msg)
+            return pr
+        else:
+            return 0
+        
+def __save_context(jmp=0):
+    global R
+    for index in (29, 26, 27):
+        content = R[index] if index != 29 else R[29] + 4 + jmp
+        __overwrite(R[30], 4, content)
+        R[30] -= 4
+
+def hex2float(value):
+    value = int(value, 16) if isinstance(value, str) else value
+    return struct.unpack(">f", struct.pack(">i", value))[0]
 
 def main(args):
     try:
@@ -1150,29 +1375,38 @@ def main(args):
     except IndexError:
         output = '/dev/null'
         __stdout('[Debug: Output file not provided, redirecting to /dev/null instead]')
-                
+
     index = 0
+    irs = 0
     arg = __hex(0)
     with open(output, 'w') as bus:
         __init(bus)            # Start bus, if file name provided
+        __read_stdin(args)
         __load_program(buffer) # Load program into virtual memory
         __begin()              # Write starting sentence
         while True:
-            inst = buffer[index]   # Access buffer at referenced address
-            call = parse_arg(inst) # Parse instruction word
             try:
-                irs  = __countdown()        # Update watchdog countdown & get interruption status
+                inst = buffer[index]        # Access buffer at referenced address
+                call = parse_arg(inst)      # Parse instruction word
+                __fpu_query()               # FPU cycle interruption verification
                 word = 0xFFFFFFFF           # Define 32-bit extractor
                 arg  = int(inst, 16) & word # Extract 32-bit buffer
                 __loadreg(arg)              # Load current instruction to IR
-                cmd, jmp = call(arg)        # Call function with args
+                irs  = __int_query()        # Iterruption manager
                 if irs != 0:
-                    index += __goto_intr(irs)
+                    index += goto_intr(irs) # In case interruption happens, computes new address
                 else:
-                    index += __goto(jmp)    # Goes to new address in memory
+                    __store_address()
+                    cmd, jmp = call(arg)    # Call function with args
+                    index += goto(jmp)      # Goes to new address in memory
+                    __countdown()           # Update watchdog countdown
                     __write(cmd)            # Write result to the bus
             except TypeError:
                 __badinstr(arg)
+            except IndexError as ex2:
+                __stdout(ex2)
+                __stdout('[Error: Probably tried to access buffer at invalid location]')
+                __interrupt()
             except Exception as ex1:
                 __stdout(ex1)
                 __interrupt()

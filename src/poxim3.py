@@ -24,7 +24,7 @@ import sys
 import struct
 import math
 import random
- 
+
 # General purpose registers
 # CR -> R[26], IPC -> R[27], IR -> R[28], PC -> R[29], SP -> R[30], SR -> R[31]
 
@@ -423,7 +423,7 @@ def modi(args):
             reg = math.remainder(R[x], __twos_comp(l)) if z != 0 else R[z]
         elif signrx < 0:
             reg = math.remainder(__twos_comp(R[x]), l) if z != 0 else R[z]
-            
+
         R[z] = int(reg) + 2 ** 32 & 0xFFFFFFFF if z != 0 else R[z]
         R[31] = R[31] | 0x40 if R[z]  == 0 else R[31] & ~(1<<0x06)
         R[31] &= ~(1<<0x03)
@@ -787,7 +787,7 @@ def intx(args):
     addr  = __hex(R[29])
     l = args >> 0 & 0x3FFFFFF
     __save_context()
-    
+
     if l == 0:
         R[29] = 0
         ins   = 'int 0'.ljust(25)
@@ -959,7 +959,7 @@ def __subarg(args):
         return subfunc[hex(index)](args)
     except KeyError:
         __badinstr(args)
-    
+
 def __stdout(output, end='\n'):
     if debug:
         print(output, end=end)
@@ -983,7 +983,7 @@ def __get_stdinbyte():
     if TRM_IN:
         try:
             byte = int.from_bytes(TRM_IN[0].pop(0), "big") & 0xFF
-            return byte             
+            return byte
         except IndexError:
             __interrupt(0)
         except TypeError:
@@ -993,7 +993,7 @@ def __randint():
     import random
     num = random.randint(0, 0xFF)
     return num
-    
+
 def __nop():
     pass # Nothing to do here...
 
@@ -1059,7 +1059,7 @@ def __overwrite(address, size, content):
     index = address // 4
     bias = ((24-size*8) - (address % 4) * 8)+8 if size != 4 else 0
     mask = {1: 0xFF, 2: 0xFFFF, 3:0xFFFF, 4: 0xFFFFFFFF}
-    
+
     try:
         buffer = int(MEM[index], 16)
     except:
@@ -1136,7 +1136,7 @@ def goto_intr(code):
     global R
     # Jump to interruption address.
     # HW1 : code == 1 -> address => 0x00000010
-    # HW2 : code == 2 -> address => 0x00000014    
+    # HW2 : code == 2 -> address => 0x00000014
     # HW3 : code == 3 -> address => 0x00000018
     # HW4 : code == 4 -> address => 0x0000001C
     address = 0xC + 4*code    # Begins at 0x10 (code >= 1)
@@ -1170,7 +1170,7 @@ def __terminal(content):
         TRM_OUT.append(content & 0xFF)
     elif DEV == 0x8888888A:
         TRM_IN.append(content & 0xFF)
-        
+
 def __watchdog(content):
     global WDG, DEV, CNT
     DEV = 0x80808080
@@ -1179,7 +1179,7 @@ def __watchdog(content):
 
 def __fpu(content):
     global R, X, Y, Z, CTR, DEV, FPU_INT, FPU_OP, FPU_ERR, HDT
-    
+
     address = DEV
     operation = {
         0 : __nop,
@@ -1191,13 +1191,13 @@ def __fpu(content):
         6 : '__aty',
         7 : __ceil,
         8 : __floor,
-        9 : __round 
+        9 : __round
     }
-    
+
     if address in range(0x80808880, 0x80808884):
         X = { 'value' : content, 'type' : int }
         __stdout('[Debug: Content of X = [{}]'.format(__hex(X['value'])))
-    elif address in range(0x80808884, 0x80808888):  
+    elif address in range(0x80808884, 0x80808888):
         Y = { 'value' : content, 'type' : int }
         __stdout('[Debug: Content of Y = [{}]'.format(__hex(Y['value'])))
     elif address in range(0x80808888, 0x8080888C):
@@ -1207,7 +1207,7 @@ def __fpu(content):
         CTR = content & 0x1F
         FPU_OP = CTR >> 0x0 & 0x1F
         FPU_INT = 1
-        
+
         try:
             __stdout('[Debug: FPU processing. Operation [{}]]'.format(operation[FPU_OP].__name__))
         except:
@@ -1227,12 +1227,12 @@ def __fpu(content):
                 z = Z['value'] if Z['type'] is float else __ieee754(float(Z['value']))
             except Exception:
                 __stdout('[Debug: Warning. FPU ZeroDivision exception]')
-                z = 0        
+                z = 0
             Z = operation[FPU_OP](z)
             __stdout('[Debug: Content of Z = [{}]]'.format(__hex(Z['value'])))
             HDT = 4
         elif FPU_OP in range(10):
-            try:     
+            try:
                 x = X['value'] if X['type'] is float else __ieee754(float(X['value']))
                 y = Y['value'] if Y['type'] is float else __ieee754(float(Y['value']))
             except Exception:
@@ -1293,9 +1293,9 @@ def __store_address():
 def __countdown():
     global WDG, CNT, R
     if WDG == 1:                  # Watchdog enabled
-        if CNT > 1: 
+        if CNT > 1:
             CNT -= 1              # Decrement counter
-        else: 
+        else:
             CNT = 0x7FFFFFFF      # Reset counter
             WDG = 0               # Disable watchdog
     else:
@@ -1350,7 +1350,7 @@ def __interrupt(pr=0):
             return pr
         else:
             return 0
-        
+
 def __save_context(jmp=0):
     global R
     for index in (29, 26, 27):
@@ -1461,7 +1461,7 @@ def parse_arg(content):
         '0x20': reti,
         '0x21': __clear_bit
     }
-    
+
     try:
         signal = int(content, 16)     # Convert buffer content to uint64
         op = hex(signal >> 26 & 0x3F) # Get the first 6-bits of the instruction
